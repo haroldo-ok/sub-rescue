@@ -29,7 +29,7 @@ void interrupt_handler() {
 
 void load_standard_palettes() {
 	SMS_loadBGPalette(test_pal);
-	SMS_loadSpritePalette(test_pal);
+	SMS_loadSpritePalette(sprites_palette_bin);
 	SMS_setSpritePaletteColor(0, 0);
 }
 
@@ -48,6 +48,8 @@ char gameplay_loop() {
 	SMS_waitForVBlank();
 	SMS_displayOff();
 
+	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+
 	load_standard_palettes();
 
 	clear_sprites();
@@ -59,7 +61,14 @@ char gameplay_loop() {
 		
 	SMS_displayOn();
 	
-	while(1);
+	while(1) {
+		SMS_initSprites();	
+		draw_meta_sprite(16, 16, 3, 1, 2);
+		SMS_finalizeSprites();		
+
+		SMS_waitForVBlank();
+		SMS_copySpritestoSAT();
+	}
 }
 
 void main() {
