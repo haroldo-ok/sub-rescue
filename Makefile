@@ -1,11 +1,9 @@
-PRJNAME := maze3d
-OBJS := data.rel maze3d.rel
+PRJNAME := sub_rescue
+OBJS := data.rel sub_rescue.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/font.1bpp data/minimap_tiles.psgcompr \
-	data/monster_full_tiles.psgcompr data/monster_half_tiles.psgcompr data/monster_quarter_tiles.psgcompr \
-	data/defeat_tiles.psgcompr data/title_tiles.psgcompr 
+data.c: data/* data/font.1bpp
 	folder2c data data
 	
 data/monster_full_tiles.psgcompr: data/img/monster_full.png
