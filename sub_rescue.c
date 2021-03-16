@@ -44,6 +44,7 @@ void configure_text() {
 }
 
 char gameplay_loop() {
+	int frame = 0;
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -63,11 +64,18 @@ char gameplay_loop() {
 	
 	while(1) {
 		SMS_initSprites();	
-		draw_meta_sprite(16, 16, 3, 1, 2);
+		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
 		SMS_finalizeSprites();		
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+		
+		frame += 6;
+		if (frame > 12) frame = 0;
+		
+		for (int i = 0; i != 3; i++) {
+			SMS_waitForVBlank();
+		}
 	}
 }
 
