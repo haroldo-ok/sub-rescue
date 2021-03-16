@@ -66,6 +66,8 @@ char gameplay_loop() {
 		SMS_initSprites();	
 		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
 		draw_meta_sprite(32, 40, 3, 1, 20 + frame);
+		draw_meta_sprite(16, 74, 3, 1, 64 + 2 + frame);
+		draw_meta_sprite(32, 108, 3, 1, 64 + 20 + frame);
 		SMS_finalizeSprites();		
 
 		SMS_waitForVBlank();
