@@ -76,7 +76,11 @@ char gameplay_loop() {
 		
 		// Enemy fish
 		draw_meta_sprite(16, 142, 2, 1, 128 + fish_frame);
-		draw_meta_sprite(32, 142, 2, 1, 128 + 16 + fish_frame);
+		draw_meta_sprite(40, 142, 2, 1, 128 + 16 + fish_frame);
+		
+		// Diver
+		draw_meta_sprite(16, 166, 2, 1, 192 + fish_frame);
+		draw_meta_sprite(40, 166, 2, 1, 192 + 16 + fish_frame);
 
 		SMS_finalizeSprites();		
 
