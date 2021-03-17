@@ -9,7 +9,8 @@
 #define SCREEN_H (192)
 #define SCROLL_H (224)
 
-#define MAX_ACTORS (2)
+#define MAX_SPAWNERS (1)
+#define MAX_ACTORS (2 + MAX_SPAWNERS * 2)
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 	
 #define ANIMATION_SPEED (3)
@@ -38,6 +39,7 @@ actor actors[MAX_ACTORS];
 
 actor *player = actors;
 actor *ply_shot = actors + 1;
+actor *first_spawner = actors + 2;
 
 int animation_delay;
 
@@ -185,6 +187,35 @@ void handle_player_input() {
 	}
 }
 
+void handle_spawners() {
+	actor *act = first_spawner;
+	for (int i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
+		actor *act2 = act + 1;
+		if (!act->active && !act2->active) {
+			int thing_to_spawn = rand() & 3 - 2;
+			if (thing_to_spawn >= 0) {
+				char facing_left = rand() & 1;
+				
+				switch (thing_to_spawn) {
+				case 0:
+					// Spawn a submarine
+					init_actor(act, 0, y, 3, 1, 66, 3);
+					act->spd_x = 3;
+					break;
+				}
+				
+				act->facing_left = facing_left;
+				if (facing_left) {
+					act->x = SCREEN_W - act->x;
+					act->spd_x = -act->spd_x;
+				} else {
+					act->x -= act->pixel_w;
+				}
+			}	
+		}
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -215,6 +246,7 @@ char gameplay_loop() {
 	
 	while(1) {
 		handle_player_input();
+		handle_spawners();
 		move_actors();
 		
 		SMS_initSprites();	
