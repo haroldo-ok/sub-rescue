@@ -9,15 +9,22 @@
 #define SCREEN_H (192)
 #define SCROLL_H (224)
 
-#define PLAYER_SPEED (3)
+#define MAX_ACTORS (2)
+
+#define PLAYER_SPEED (2)
+
 
 typedef struct actor {
+	char active;
 	int x, y;
 	char char_w, char_h;
 	unsigned char base_tile;
 } actor;
 
-actor player;
+actor actors[MAX_ACTORS];
+
+actor *player = actors;
+actor *ply_shot = actors + 1;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	for (char i = h; i; i--) {
@@ -32,6 +39,9 @@ void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 }
 
 void draw_actor(actor *act) {
+	if (!act->active) {
+		return;
+	}
 	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, act->base_tile);
 }
 
@@ -65,15 +75,15 @@ void handle_player_input() {
 	unsigned char joy = SMS_getKeysStatus();
 	
 	if (joy & PORT_A_KEY_UP) {
-		player.y -= PLAYER_SPEED;
+		player->y -= PLAYER_SPEED;
 	} else if (joy & PORT_A_KEY_DOWN) {
-		player.y += PLAYER_SPEED;
+		player->y += PLAYER_SPEED;
 	}
 	
 	if (joy & PORT_A_KEY_LEFT) {
-		player.x -= PLAYER_SPEED;
+		player->x -= PLAYER_SPEED;
 	} else if (joy & PORT_A_KEY_RIGHT) {
-		player.x += PLAYER_SPEED;
+		player->x += PLAYER_SPEED;
 	}
 }
 
@@ -82,11 +92,14 @@ char gameplay_loop() {
 	int fish_frame = 0;
 	int torpedo_frame = 0;
 	
-	player.x = 0;
-	player.y = 0;
-	player.char_w = 3;
-	player.char_h = 1;
-	player.base_tile = 2;
+	player->active = 1;
+	player->x = 0;
+	player->y = 0;
+	player->char_w = 3;
+	player->char_h = 1;
+	player->base_tile = 2;
+	
+	ply_shot->active = 0;
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -109,7 +122,10 @@ char gameplay_loop() {
 		
 		SMS_initSprites();	
 
-		draw_actor(&player);
+		actor *act = actors;
+		for (int i = 0; i != MAX_ACTORS; i++, act++) {
+			draw_actor(act);
+		}
 
 		// Player
 		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
@@ -148,10 +164,6 @@ char gameplay_loop() {
 				
 		torpedo_frame += 2;
 		if (torpedo_frame > 4) torpedo_frame = 0;
-		
-		for (int i = 0; i != 3; i++) {
-			SMS_waitForVBlank();
-		}
 	}
 }
 
