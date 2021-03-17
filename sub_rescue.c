@@ -13,6 +13,7 @@
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 
 #define PLAYER_SPEED (2)
+#define PLAYER_SHOT_SPEED (4)
 
 
 typedef struct actor {
@@ -103,6 +104,11 @@ void configure_text() {
 	SMS_configureTextRenderer(352 - 32);
 }
 
+void fire_shot(actor *shot, actor *shooter, char speed) {
+	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36);
+	shot->spd_x = -speed;
+}
+
 void handle_player_input() {
 	unsigned char joy = SMS_getKeysStatus();
 	
@@ -116,6 +122,10 @@ void handle_player_input() {
 		player->x -= PLAYER_SPEED;
 	} else if (joy & PORT_A_KEY_RIGHT) {
 		player->x += PLAYER_SPEED;
+	}
+	
+	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+		fire_shot(ply_shot, player, PLAYER_SHOT_SPEED);
 	}
 }
 
