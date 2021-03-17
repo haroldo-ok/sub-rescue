@@ -16,6 +16,8 @@
 
 #define PLAYER_SPEED (2)
 #define PLAYER_SHOT_SPEED (4)
+#define PLAYER_TOP (32)
+#define PLAYER_LEFT (8)
 
 
 typedef struct actor {
@@ -137,7 +139,7 @@ void fire_shot(actor *shot, actor *shooter, char speed) {
 	shot->facing_left = shooter->facing_left;
 	shot->spd_x = shooter->facing_left ? -speed : speed;
 	if (!shooter->facing_left) {
-		shot->x += shooter->pixel_w;
+		shot->x += shooter->pixel_w - 8;
 	}
 }
 
@@ -145,16 +147,16 @@ void handle_player_input() {
 	unsigned char joy = SMS_getKeysStatus();
 	
 	if (joy & PORT_A_KEY_UP) {
-		player->y -= PLAYER_SPEED;
+		if (player->y > PLAYER_TOP) player->y -= PLAYER_SPEED;
 	} else if (joy & PORT_A_KEY_DOWN) {
-		player->y += PLAYER_SPEED;
+		if (player->y < SCREEN_H - player->pixel_h) player->y += PLAYER_SPEED;
 	}
 	
-	if (joy & PORT_A_KEY_LEFT) {
-		player->x -= PLAYER_SPEED;
+	if (joy & PORT_A_KEY_LEFT) {		
+		if (player->x > PLAYER_LEFT) player->x -= PLAYER_SPEED;
 		player->facing_left = 1;
 	} else if (joy & PORT_A_KEY_RIGHT) {
-		player->x += PLAYER_SPEED;
+		if (player->x < SCREEN_W - player->pixel_w) player->x += PLAYER_SPEED;
 		player->facing_left = 0;
 	}
 	
@@ -170,7 +172,7 @@ char gameplay_loop() {
 	
 	animation_delay = 0;
 	
-	init_actor(player, 0, 0, 3, 1, 2, 3);
+	init_actor(player, 16, 32, 3, 1, 2, 3);
 	
 	ply_shot->active = 0;
 
