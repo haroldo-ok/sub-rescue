@@ -46,6 +46,7 @@ void configure_text() {
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
+	int torpedo_frame = 0;
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -70,9 +71,17 @@ char gameplay_loop() {
 		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
 		draw_meta_sprite(32, 40, 3, 1, 20 + frame);
 		
+		// Player's torpedo
+		draw_meta_sprite(0, 16, 1, 1, 38 + torpedo_frame);
+		draw_meta_sprite(64, 40, 1, 1, 38 + 6 + torpedo_frame);
+		
 		// Enemy sub
 		draw_meta_sprite(16, 74, 3, 1, 64 + 2 + frame);
 		draw_meta_sprite(32, 108, 3, 1, 64 + 20 + frame);
+		
+		// Enemy sub's torpedo
+		draw_meta_sprite(0, 74, 1, 1, 64 + 38 + torpedo_frame);
+		draw_meta_sprite(64, 108, 1, 1, 64 + 38 + 6 + torpedo_frame);
 		
 		// Enemy fish
 		draw_meta_sprite(16, 142, 2, 1, 128 + fish_frame);
@@ -92,6 +101,9 @@ char gameplay_loop() {
 		
 		fish_frame += 4;
 		if (fish_frame > 12) fish_frame = 0;
+				
+		torpedo_frame += 2;
+		if (torpedo_frame > 4) torpedo_frame = 0;
 		
 		for (int i = 0; i != 3; i++) {
 			SMS_waitForVBlank();
