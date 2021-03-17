@@ -10,13 +10,17 @@
 #define SCROLL_H (224)
 
 #define MAX_ACTORS (2)
+#define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 
 #define PLAYER_SPEED (2)
 
 
 typedef struct actor {
 	char active;
+	
 	int x, y;
+	int spd_x;
+	
 	char char_w, char_h;
 	unsigned char base_tile;
 } actor;
@@ -38,11 +42,39 @@ void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	}
 }
 
+void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char base_tile) {
+	act->active = 1;
+	
+	act->x = x;
+	act->y = y;
+	act->spd_x = 0;
+	
+	act->char_w = char_w;
+	act->char_h = char_h;
+	act->base_tile = base_tile;
+}
+
+void move_actor(actor *act) {
+	act->x += act->spd_x;
+}
+
+void move_actors() {
+	FOREACH_ACTOR(act) {
+		move_actor(act);
+	}
+}
+
 void draw_actor(actor *act) {
 	if (!act->active) {
 		return;
 	}
 	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, act->base_tile);
+}
+
+void draw_actors() {
+	FOREACH_ACTOR(act) {
+		draw_actor(act);
+	}
 }
 
 void clear_sprites() {
@@ -92,12 +124,7 @@ char gameplay_loop() {
 	int fish_frame = 0;
 	int torpedo_frame = 0;
 	
-	player->active = 1;
-	player->x = 0;
-	player->y = 0;
-	player->char_w = 3;
-	player->char_h = 1;
-	player->base_tile = 2;
+	init_actor(player, 0, 0, 3, 1, 2);
 	
 	ply_shot->active = 0;
 
@@ -119,13 +146,11 @@ char gameplay_loop() {
 	
 	while(1) {
 		handle_player_input();
+		move_actors();
 		
 		SMS_initSprites();	
 
-		actor *act = actors;
-		for (int i = 0; i != MAX_ACTORS; i++, act++) {
-			draw_actor(act);
-		}
+		draw_actors();
 
 		// Player
 		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
