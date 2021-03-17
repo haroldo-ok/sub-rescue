@@ -43,11 +43,15 @@ int animation_delay;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	for (char i = h; i; i--) {
-		int sx = x;
-		for (char j = w; j; j--) {
-			SMS_addSprite(sx, y, tile);
-			sx += 8;
-			tile += 2;
+		if (y >= 0 && y < SCREEN_H) {
+			int sx = x;
+			for (char j = w; j; j--) {
+				if (sx >= 0 && sx < SCREEN_W) {
+					SMS_addSprite(sx, y, tile);
+				}
+				sx += 8;
+				tile += 2;
+			}
 		}
 		y += 16;
 	}
@@ -73,8 +77,22 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	act->frame_max = act->frame_increment * frame_count;
 }
 
+void clear_actors() {
+	FOREACH_ACTOR(act) {
+		act->active = 0;
+	}
+}
+
 void move_actor(actor *act) {
-	act->x += act->spd_x;
+	if (act->spd_x) {
+		act->x += act->spd_x;
+		
+		if (act->spd_x < 0) {
+			if (act->x + act->pixel_w < 0) act->active = 0;
+		} else {
+			if (act->x >= SCREEN_W) act->active = 0;
+		}
+	}
 }
 
 void move_actors() {
@@ -134,6 +152,8 @@ void configure_text() {
 }
 
 void fire_shot(actor *shot, actor *shooter, char speed) {
+	if (shot->active) return;
+	
 	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
 	
 	shot->facing_left = shooter->facing_left;
@@ -171,7 +191,8 @@ char gameplay_loop() {
 	int torpedo_frame = 0;
 	
 	animation_delay = 0;
-	
+
+	clear_actors();
 	init_actor(player, 16, 32, 3, 1, 2, 3);
 	
 	ply_shot->active = 0;
