@@ -21,9 +21,13 @@ typedef struct actor {
 	
 	int x, y;
 	int spd_x;
+	char facing_left;
 	
 	char char_w, char_h;
+	char pixel_w, pixel_h;
+	
 	unsigned char base_tile;
+	unsigned char frame_count;
 } actor;
 
 actor actors[MAX_ACTORS];
@@ -49,9 +53,12 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	act->x = x;
 	act->y = y;
 	act->spd_x = 0;
+	act->facing_left = 1;
 	
 	act->char_w = char_w;
 	act->char_h = char_h;
+	act->pixel_w = char_w << 3;
+	act->pixel_h = char_h << 4;
 	act->base_tile = base_tile;
 }
 
@@ -106,7 +113,12 @@ void configure_text() {
 
 void fire_shot(actor *shot, actor *shooter, char speed) {
 	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36);
-	shot->spd_x = -speed;
+	
+	shot->facing_left = shooter->facing_left;
+	shot->spd_x = shooter->facing_left ? -speed : speed;
+	if (!shooter->facing_left) {
+		shot->x += shooter->pixel_w;
+	}
 }
 
 void handle_player_input() {
@@ -120,8 +132,10 @@ void handle_player_input() {
 	
 	if (joy & PORT_A_KEY_LEFT) {
 		player->x -= PLAYER_SPEED;
+		player->facing_left = 1;
 	} else if (joy & PORT_A_KEY_RIGHT) {
 		player->x += PLAYER_SPEED;
+		player->facing_left = 0;
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
