@@ -11,6 +11,8 @@
 
 #define MAX_ACTORS (2)
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
+	
+#define ANIMATION_SPEED (3)
 
 #define PLAYER_SPEED (2)
 #define PLAYER_SHOT_SPEED (4)
@@ -26,14 +28,16 @@ typedef struct actor {
 	char char_w, char_h;
 	char pixel_w, pixel_h;
 	
-	unsigned char base_tile;
-	unsigned char frame_count;
+	unsigned char base_tile, frame_count;
+	unsigned char frame, frame_increment, frame_max;
 } actor;
 
 actor actors[MAX_ACTORS];
 
 actor *player = actors;
 actor *ply_shot = actors + 1;
+
+int animation_delay;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	for (char i = h; i; i--) {
@@ -47,7 +51,7 @@ void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	}
 }
 
-void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char base_tile) {
+void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char base_tile, unsigned char frame_count) {
 	act->active = 1;
 	
 	act->x = x;
@@ -59,7 +63,12 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	act->char_h = char_h;
 	act->pixel_w = char_w << 3;
 	act->pixel_h = char_h << 4;
+	
 	act->base_tile = base_tile;
+	act->frame_count = frame_count;
+	act->frame = 0;
+	act->frame_increment = char_w * (char_h << 1);
+	act->frame_max = act->frame_increment * frame_count;
 }
 
 void move_actor(actor *act) {
@@ -76,7 +85,18 @@ void draw_actor(actor *act) {
 	if (!act->active) {
 		return;
 	}
-	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, act->base_tile);
+	
+	unsigned char frame_tile = act->base_tile + act->frame;
+	if (!act->facing_left) {
+		frame_tile += act->frame_max;
+	}
+	
+	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, frame_tile);	
+
+	if (!animation_delay) {
+		act->frame += act->frame_increment;
+		if (act->frame >= act->frame_max) act->frame = 0;
+	}
 }
 
 void draw_actors() {
@@ -112,7 +132,7 @@ void configure_text() {
 }
 
 void fire_shot(actor *shot, actor *shooter, char speed) {
-	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36);
+	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
 	
 	shot->facing_left = shooter->facing_left;
 	shot->spd_x = shooter->facing_left ? -speed : speed;
@@ -148,7 +168,9 @@ char gameplay_loop() {
 	int fish_frame = 0;
 	int torpedo_frame = 0;
 	
-	init_actor(player, 0, 0, 3, 1, 2);
+	animation_delay = 0;
+	
+	init_actor(player, 0, 0, 3, 1, 2, 3);
 	
 	ply_shot->active = 0;
 
@@ -213,6 +235,9 @@ char gameplay_loop() {
 				
 		torpedo_frame += 2;
 		if (torpedo_frame > 4) torpedo_frame = 0;
+		
+		animation_delay--;
+		if (animation_delay < 0) animation_delay = ANIMATION_SPEED;
 	}
 }
 
