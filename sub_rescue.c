@@ -5,6 +5,12 @@
 #include "lib/PSGlib.h"
 #include "data.h"
 
+#define SCREEN_W (256)
+#define SCREEN_H (192)
+#define SCROLL_H (224)
+
+#define PLAYER_SPEED (3)
+
 typedef struct actor {
 	int x, y;
 	char char_w, char_h;
@@ -55,6 +61,22 @@ void configure_text() {
 	SMS_configureTextRenderer(352 - 32);
 }
 
+void handle_player_input() {
+	unsigned char joy = SMS_getKeysStatus();
+	
+	if (joy & PORT_A_KEY_UP) {
+		player.y -= PLAYER_SPEED;
+	} else if (joy & PORT_A_KEY_DOWN) {
+		player.y += PLAYER_SPEED;
+	}
+	
+	if (joy & PORT_A_KEY_LEFT) {
+		player.x -= PLAYER_SPEED;
+	} else if (joy & PORT_A_KEY_RIGHT) {
+		player.x += PLAYER_SPEED;
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -83,6 +105,8 @@ char gameplay_loop() {
 	SMS_displayOn();
 	
 	while(1) {
+		handle_player_input();
+		
 		SMS_initSprites();	
 
 		draw_actor(&player);
@@ -134,6 +158,7 @@ char gameplay_loop() {
 void main() {
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
+	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 	
 	while (1) {			
 		gameplay_loop();
