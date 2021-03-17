@@ -5,6 +5,14 @@
 #include "lib/PSGlib.h"
 #include "data.h"
 
+typedef struct actor {
+	int x, y;
+	char char_w, char_h;
+	unsigned char base_tile;
+} actor;
+
+actor player;
+
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	for (char i = h; i; i--) {
 		int sx = x;
@@ -15,6 +23,10 @@ void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 		}
 		y += 16;
 	}
+}
+
+void draw_actor(actor *act) {
+	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, act->base_tile);
 }
 
 void clear_sprites() {
@@ -47,6 +59,12 @@ char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
 	int torpedo_frame = 0;
+	
+	player.x = 0;
+	player.y = 0;
+	player.char_w = 3;
+	player.char_h = 1;
+	player.base_tile = 2;
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -66,7 +84,9 @@ char gameplay_loop() {
 	
 	while(1) {
 		SMS_initSprites();	
-		
+
+		draw_actor(&player);
+
 		// Player
 		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
 		draw_meta_sprite(32, 40, 3, 1, 20 + frame);
