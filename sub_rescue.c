@@ -9,7 +9,7 @@
 #define SCREEN_H (192)
 #define SCROLL_H (224)
 
-#define MAX_SPAWNERS (6)
+#define MAX_SPAWNERS (5)
 #define MAX_ACTORS (2 + MAX_SPAWNERS * 2)
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 	
@@ -27,6 +27,7 @@ typedef struct actor {
 	int x, y;
 	int spd_x;
 	char facing_left;
+	char autofire;
 	
 	char char_w, char_h;
 	char pixel_w, pixel_h;
@@ -66,6 +67,7 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	act->y = y;
 	act->spd_x = 0;
 	act->facing_left = 1;
+	act->autofire = 0;
 	
 	act->char_w = char_w;
 	act->char_h = char_h;
@@ -85,7 +87,21 @@ void clear_actors() {
 	}
 }
 
+void fire_shot(actor *shot, actor *shooter, char speed) {
+	if (shot->active) return;
+	
+	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
+	
+	shot->facing_left = shooter->facing_left;
+	shot->spd_x = shooter->facing_left ? -speed : speed;
+	if (!shooter->facing_left) {
+		shot->x += shooter->pixel_w - 8;
+	}
+}
+
 void move_actor(actor *act) {
+	if (!act->active) return;
+	
 	if (act->spd_x) {
 		act->x += act->spd_x;
 		
@@ -93,8 +109,10 @@ void move_actor(actor *act) {
 			if (act->x + act->pixel_w < 0) act->active = 0;
 		} else {
 			if (act->x >= SCREEN_W) act->active = 0;
-		}
+		}				
 	}
+	
+	if (act->autofire) fire_shot(act + 1, act, abs(act->spd_x) + 1);
 }
 
 void move_actors() {
@@ -153,18 +171,6 @@ void configure_text() {
 	SMS_configureTextRenderer(352 - 32);
 }
 
-void fire_shot(actor *shot, actor *shooter, char speed) {
-	if (shot->active) return;
-	
-	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
-	
-	shot->facing_left = shooter->facing_left;
-	shot->spd_x = shooter->facing_left ? -speed : speed;
-	if (!shooter->facing_left) {
-		shot->x += shooter->pixel_w - 8;
-	}
-}
-
 void shuffle_random(char times) {
 	for (; times; times--) {
 		rand();
@@ -221,6 +227,7 @@ void handle_spawners() {
 					// Spawn a submarine
 					init_actor(act, 0, y, 3, 1, 66, 3);
 					act->spd_x = 3;
+					act->autofire = 1;
 					break;
 					
 				case 1:
