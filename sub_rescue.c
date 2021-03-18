@@ -9,7 +9,7 @@
 #define SCREEN_H (192)
 #define SCROLL_H (224)
 
-#define MAX_SPAWNERS (1)
+#define MAX_SPAWNERS (6)
 #define MAX_ACTORS (2 + MAX_SPAWNERS * 2)
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 	
@@ -165,25 +165,45 @@ void fire_shot(actor *shot, actor *shooter, char speed) {
 	}
 }
 
+void shuffle_random(char times) {
+	for (; times; times--) {
+		rand();
+	}
+}
+
 void handle_player_input() {
 	unsigned char joy = SMS_getKeysStatus();
 	
 	if (joy & PORT_A_KEY_UP) {
 		if (player->y > PLAYER_TOP) player->y -= PLAYER_SPEED;
+		shuffle_random(1);
 	} else if (joy & PORT_A_KEY_DOWN) {
 		if (player->y < SCREEN_H - player->pixel_h) player->y += PLAYER_SPEED;
+		shuffle_random(2);
 	}
 	
 	if (joy & PORT_A_KEY_LEFT) {		
 		if (player->x > PLAYER_LEFT) player->x -= PLAYER_SPEED;
 		player->facing_left = 1;
+		shuffle_random(3);
 	} else if (joy & PORT_A_KEY_RIGHT) {
 		if (player->x < SCREEN_W - player->pixel_w) player->x += PLAYER_SPEED;
 		player->facing_left = 0;
+		shuffle_random(4);
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
 		fire_shot(ply_shot, player, PLAYER_SHOT_SPEED);
+	}
+}
+
+void adjust_facing(actor *act, char facing_left) {
+	act->facing_left = facing_left;
+	if (facing_left) {
+		act->x = SCREEN_W - act->x;
+		act->spd_x = -act->spd_x;
+	} else {
+		act->x -= act->pixel_w;
 	}
 }
 
@@ -192,9 +212,9 @@ void handle_spawners() {
 	for (int i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
 		actor *act2 = act + 1;
 		if (!act->active && !act2->active) {
-			int thing_to_spawn = rand() & 3 - 2;
-			if (thing_to_spawn >= 0) {
-				char facing_left = rand() & 1;
+			if (rand() & 3 > 1) {
+				char facing_left = (rand() >> 4) & 1;
+				char thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
 				
 				switch (thing_to_spawn) {
 				case 0:
@@ -202,15 +222,24 @@ void handle_spawners() {
 					init_actor(act, 0, y, 3, 1, 66, 3);
 					act->spd_x = 3;
 					break;
+					
+				case 1:
+					// Spawn a pair of fishes
+					init_actor(act, 0, y, 2, 1, 128, 4);
+					init_actor(act2, -64, y, 2, 1, 128, 4);
+					act->spd_x = 3;
+					act2->spd_x = 3;
+					break;
+					
+				case 2:
+					// Spawn a diver
+					init_actor(act, 0, y, 2, 1, 192, 4);
+					act->spd_x = 3;
+					break;
 				}
 				
-				act->facing_left = facing_left;
-				if (facing_left) {
-					act->x = SCREEN_W - act->x;
-					act->spd_x = -act->spd_x;
-				} else {
-					act->x -= act->pixel_w;
-				}
+				adjust_facing(act, facing_left);
+				adjust_facing(act2, facing_left);
 			}	
 		}
 	}
@@ -253,6 +282,7 @@ char gameplay_loop() {
 
 		draw_actors();
 
+		/*
 		// Player
 		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
 		draw_meta_sprite(32, 40, 3, 1, 20 + frame);
@@ -276,6 +306,7 @@ char gameplay_loop() {
 		// Diver
 		draw_meta_sprite(16, 166, 2, 1, 192 + fish_frame);
 		draw_meta_sprite(40, 166, 2, 1, 192 + 16 + fish_frame);
+		*/
 
 		SMS_finalizeSprites();		
 
