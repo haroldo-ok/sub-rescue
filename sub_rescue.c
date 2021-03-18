@@ -156,7 +156,7 @@ void interrupt_handler() {
 }
 
 void load_standard_palettes() {
-	SMS_loadBGPalette(test_pal);
+	SMS_loadBGPalette(background_palette_bin);
 	SMS_loadSpritePalette(sprites_palette_bin);
 	SMS_setSpritePaletteColor(0, 0);
 }
@@ -252,6 +252,23 @@ void handle_spawners() {
 	}
 }
 
+void draw_background() {
+	unsigned int *ch = background_tilemap_bin;
+	
+	SMS_setNextTileatXY(0, 0);
+	for (char y = 0; y != 24; y++) {
+		for (char x = 0; x != 32; x++) {
+			unsigned int tile_number = *ch + 256;
+			if (y == 5) {
+				tile_number |= TILE_PRIORITY;
+			}
+			
+			SMS_setTile(tile_number);
+			ch++;
+		}
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -268,16 +285,16 @@ char gameplay_loop() {
 	SMS_displayOff();
 
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 256);
+	
+	draw_background();
 
 	load_standard_palettes();
 
 	clear_sprites();
 
-	configure_text();
+	//configure_text();
 	
-	SMS_setNextTileatXY(4, 12);
-	puts("Hello, world!");
-		
 	SMS_displayOn();
 	
 	while(1) {
