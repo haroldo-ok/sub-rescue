@@ -251,23 +251,30 @@ void handle_player_input() {
 }
 
 void adjust_facing(actor *act, char facing_left) {
-	act->facing_left = facing_left;
+	static actor *_act;
+	_act = act;
+	
+	_act->facing_left = facing_left;
 	if (facing_left) {
-		act->x = SCREEN_W - act->x;
-		act->spd_x = -act->spd_x;
+		_act->x = SCREEN_W - _act->x;
+		_act->spd_x = -_act->spd_x;
 	} else {
-		act->x -= act->pixel_w;
+		_act->x -= _act->pixel_w;
 	}
 }
 
 void handle_spawners() {
-	actor *act = first_spawner;
-	for (int i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
-		actor *act2 = act + 1;
+	static actor *act, *act2;
+	static char i, facing_left, thing_to_spawn;
+	static int y;
+	
+	act = first_spawner;
+	for (i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
+		act2 = act + 1;
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
-				char facing_left = (rand() >> 4) & 1;
-				char thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
+				facing_left = (rand() >> 4) & 1;
+				thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
 				
 				switch (thing_to_spawn) {
 				case 0:
@@ -321,12 +328,11 @@ void draw_background() {
 	}
 }
 
-// Speed optimization
-actor *collider1, *collider2;
-int r1_tlx, r1_tly, r1_brx, r1_bry;
-int r2_tlx, r2_tly, r2_brx, r2_bry;
-
 char is_touching(actor *act1, actor *act2) {
+	static actor *collider1, *collider2;
+	static int r1_tlx, r1_tly, r1_brx, r1_bry;
+	static int r2_tlx, r2_tly, r2_bry;
+
 	// Use global variables for speed
 	collider1 = act1;
 	collider2 = act2;
