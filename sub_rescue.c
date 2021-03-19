@@ -20,6 +20,11 @@
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
 
+#define GROUP_ENEMY_SUB (1)
+#define GROUP_ENEMY_SHOT (2)
+#define GROUP_FISH (3)
+#define GROUP_DIVER (4)
+
 
 typedef struct actor {
 	char active;
@@ -129,7 +134,7 @@ void move_actor(actor *act) {
 	if (act->autofire) {
 		actor *shot = act + 1;		
 		fire_shot(shot, act, abs(act->spd_x) + 1);
-		shot->group = 4;
+		shot->group = GROUP_ENEMY_SHOT;
 	}
 }
 
@@ -246,7 +251,7 @@ void handle_spawners() {
 					init_actor(act, 0, y, 3, 1, 66, 3);
 					act->spd_x = 2;
 					act->autofire = 1;
-					act->group = 1;
+					act->group = GROUP_ENEMY_SUB;
 					break;
 					
 				case 1:
@@ -254,7 +259,7 @@ void handle_spawners() {
 					init_actor(act, 0, y, 2, 1, 128, 4);
 					init_actor(act2, -64, y, 2, 1, 128, 4);
 					act->spd_x = 2;
-					act->group = 2;
+					act->group = GROUP_FISH;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
@@ -263,8 +268,8 @@ void handle_spawners() {
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
-					act->spd_x = 3;
-					act->group = 3;
+					act->spd_x = 2;
+					act->group = GROUP_DIVER;
 					break;
 				}
 				
