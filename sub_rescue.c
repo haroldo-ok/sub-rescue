@@ -101,6 +101,11 @@ void fire_shot(actor *shot, actor *shooter, char speed) {
 	
 	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
 	
+	shot->col_x = 0;
+	shot->col_y = 8;
+	shot->col_w = shot->pixel_w;
+	shot->col_h = shot->pixel_h;
+	
 	shot->facing_left = shooter->facing_left;
 	shot->spd_x = shooter->facing_left ? -speed : speed;
 	if (!shooter->facing_left) {
@@ -239,7 +244,7 @@ void handle_spawners() {
 				case 0:
 					// Spawn a submarine
 					init_actor(act, 0, y, 3, 1, 66, 3);
-					act->spd_x = 3;
+					act->spd_x = 2;
 					act->autofire = 1;
 					act->group = 1;
 					break;
@@ -248,9 +253,11 @@ void handle_spawners() {
 					// Spawn a pair of fishes
 					init_actor(act, 0, y, 2, 1, 128, 4);
 					init_actor(act2, -64, y, 2, 1, 128, 4);
-					act->spd_x = 3;
-					act2->spd_x = 3;
+					act->spd_x = 2;
 					act->group = 2;
+
+					act2->spd_x = act->spd_x;
+					act2->group = act->group;
 					break;
 					
 				case 2:
