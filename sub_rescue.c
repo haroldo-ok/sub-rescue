@@ -54,46 +54,55 @@ actor *first_spawner = actors + 2;
 int animation_delay;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
-	for (char i = h; i; i--) {
+	static char i, j;
+	static int sx, sy;
+	static unsigned char st;
+	
+	sy = y;
+	st = tile;
+	for (i = h; i; i--) {
 		if (y >= 0 && y < SCREEN_H) {
-			int sx = x;
-			for (char j = w; j; j--) {
+			sx = x;
+			for (j = w; j; j--) {
 				if (sx >= 0 && sx < SCREEN_W) {
-					SMS_addSprite(sx, y, tile);
+					SMS_addSprite(sx, sy, tile);
 				}
 				sx += 8;
 				tile += 2;
 			}
 		}
-		y += 16;
+		sy += 16;
 	}
 }
 
 void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char base_tile, unsigned char frame_count) {
-	act->active = 1;
+	static actor *sa;
+	sa = act;
 	
-	act->x = x;
-	act->y = y;
-	act->spd_x = 0;
-	act->facing_left = 1;
-	act->autofire = 0;
+	sa->active = 1;
 	
-	act->char_w = char_w;
-	act->char_h = char_h;
-	act->pixel_w = char_w << 3;
-	act->pixel_h = char_h << 4;
+	sa->x = x;
+	sa->y = y;
+	sa->spd_x = 0;
+	sa->facing_left = 1;
+	sa->autofire = 0;
 	
-	act->base_tile = base_tile;
-	act->frame_count = frame_count;
-	act->frame = 0;
-	act->frame_increment = char_w * (char_h << 1);
-	act->frame_max = act->frame_increment * frame_count;
+	sa->char_w = char_w;
+	sa->char_h = char_h;
+	sa->pixel_w = char_w << 3;
+	sa->pixel_h = char_h << 4;
 	
-	act->group = 0;
-	act->col_w = act->pixel_w - 4;
-	act->col_h = act->pixel_h - 4;
-	act->col_x = (act->pixel_w - act->col_w) >> 1;
-	act->col_y = (act->pixel_h - act->col_h) >> 1;
+	sa->base_tile = base_tile;
+	sa->frame_count = frame_count;
+	sa->frame = 0;
+	sa->frame_increment = char_w * (char_h << 1);
+	sa->frame_max = sa->frame_increment * frame_count;
+	
+	sa->group = 0;
+	sa->col_w = sa->pixel_w - 4;
+	sa->col_h = sa->pixel_h - 4;
+	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
+	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
 }
 
 void clear_actors() {
@@ -298,6 +307,7 @@ void draw_background() {
 	}
 }
 
+// Speed optimization
 actor *collider1, *collider2;
 int r1_tlx, r1_tly, r1_brx, r1_bry;
 int r2_tlx, r2_tly, r2_brx, r2_bry;
