@@ -111,40 +111,49 @@ void clear_actors() {
 	}
 }
 
-void fire_shot(actor *shot, actor *shooter, char speed) {
+void fire_shot(actor *shot, actor *shooter, char speed) {	
+	static actor *_shot, *_shooter;
+
 	if (shot->active) return;
 	
-	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
+	_shot = shot;
+	_shooter = shooter;
 	
-	shot->col_x = 0;
-	shot->col_y = 8;
-	shot->col_w = shot->pixel_w;
-	shot->col_h = shot->pixel_h;
+	init_actor(_shot, _shooter->x, _shooter->y, 1, 1, _shooter->base_tile + 36, 3);
 	
-	shot->facing_left = shooter->facing_left;
-	shot->spd_x = shooter->facing_left ? -speed : speed;
-	if (!shooter->facing_left) {
-		shot->x += shooter->pixel_w - 8;
+	_shot->col_x = 0;
+	_shot->col_y = 8;
+	_shot->col_w = _shot->pixel_w;
+	_shot->col_h = _shot->pixel_h;
+	
+	_shot->facing_left = _shooter->facing_left;
+	_shot->spd_x = _shooter->facing_left ? -speed : speed;
+	if (!_shooter->facing_left) {
+		_shot->x += _shooter->pixel_w - 8;
 	}
 }
 
 void move_actor(actor *act) {
+	static actor *_act, *_shot;
+	
 	if (!act->active) return;
 	
-	if (act->spd_x) {
-		act->x += act->spd_x;
+	_act = act;
+	
+	if (_act->spd_x) {
+		_act->x += _act->spd_x;
 		
-		if (act->spd_x < 0) {
-			if (act->x + act->pixel_w < 0) act->active = 0;
+		if (_act->spd_x < 0) {
+			if (_act->x + _act->pixel_w < 0) _act->active = 0;
 		} else {
-			if (act->x >= SCREEN_W) act->active = 0;
+			if (_act->x >= SCREEN_W) _act->active = 0;
 		}				
 	}
 	
-	if (act->autofire) {
-		actor *shot = act + 1;		
-		fire_shot(shot, act, abs(act->spd_x) + 1);
-		shot->group = GROUP_ENEMY_SHOT;
+	if (_act->autofire) {
+		actor *_shot = _act + 1;		
+		fire_shot(_shot, _act, abs(_act->spd_x) + 1);
+		_shot->group = GROUP_ENEMY_SHOT;
 	}
 }
 
@@ -155,20 +164,25 @@ void move_actors() {
 }
 
 void draw_actor(actor *act) {
+	static actor *_act;
+	static unsigned char frame_tile;
+	
 	if (!act->active) {
 		return;
 	}
 	
-	unsigned char frame_tile = act->base_tile + act->frame;
-	if (!act->facing_left) {
-		frame_tile += act->frame_max;
+	_act = act;
+	
+	frame_tile = _act->base_tile + _act->frame;
+	if (!_act->facing_left) {
+		frame_tile += _act->frame_max;
 	}
 	
-	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, frame_tile);	
+	draw_meta_sprite(_act->x, _act->y, _act->char_w, _act->char_h, frame_tile);	
 
 	if (!animation_delay) {
-		act->frame += act->frame_increment;
-		if (act->frame >= act->frame_max) act->frame = 0;
+		_act->frame += _act->frame_increment;
+		if (_act->frame >= _act->frame_max) _act->frame = 0;
 	}
 }
 
