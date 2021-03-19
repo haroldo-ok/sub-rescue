@@ -297,29 +297,37 @@ void draw_background() {
 	}
 }
 
+actor *collider1, *collider2;
+int r1_tlx, r1_tly, r1_brx, r1_bry;
+int r2_tlx, r2_tly, r2_brx, r2_bry;
+
 char is_touching(actor *act1, actor *act2) {
+	// Use global variables for speed
+	collider1 = act1;
+	collider2 = act2;
+	
 	// Rough collision: check if their base vertical coordinates are on the same row
-	if (abs(act1->y - act2->y) > 16) {
+	if (abs(collider1->y - collider2->y) > 16) {
 		return 0;
 	}
 	
 	// Rough collision: check if their base horizontal coordinates are not too distant
-	if (abs(act1->x - act2->x) > 24) {
+	if (abs(collider1->x - collider2->x) > 24) {
 		return 0;
 	}
 	
 	// Less rough collision on the Y axis
 	
-	int r1_tly = act1->y + act1->col_y;
-	int r1_bry = r1_tly + act1->col_h;
-	int r2_tly = act2->y + act2->col_y;
+	r1_tly = collider1->y + collider1->col_y;
+	r1_bry = r1_tly + collider1->col_h;
+	r2_tly = collider2->y + collider2->col_y;
 	
 	// act1 is too far above
 	if (r1_bry < r2_tly) {
 		return 0;
 	}
 	
-	int r2_bry = r2_tly + act2->col_h;
+	r2_bry = r2_tly + collider2->col_h;
 	
 	// act1 is too far below
 	if (r1_tly > r2_bry) {
@@ -328,16 +336,16 @@ char is_touching(actor *act1, actor *act2) {
 	
 	// Less rough collision on the X axis
 	
-	int r1_tlx = act1->x + act1->col_x;
-	int r1_brx = r1_tlx + act1->col_w;
-	int r2_tlx = act2->x + act2->col_x;
+	r1_tlx = collider1->x + collider1->col_x;
+	r1_brx = r1_tlx + collider1->col_w;
+	r2_tlx = collider2->x + collider2->col_x;
 	
 	// act1 is too far to the left
 	if (r1_brx < r2_tlx) {
 		return 0;
 	}
 	
-	int r2_brx = r2_tlx + act2->col_w;
+	int r2_brx = r2_tlx + collider2->col_w;
 	
 	// act1 is too far to the left
 	if (r1_tlx > r2_brx) {
