@@ -348,13 +348,28 @@ char is_touching(actor *act1, actor *act2) {
 }
 
 void check_collision_against_player_shot(actor *act) {	
-	if (act->active && act->group) {
-		if (ply_shot->active && is_touching(act, ply_shot)) {
-			if (act->group != GROUP_DIVER) act->active = 0;
-			
-			if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
-				ply_shot->active = 0;
-			}
+	if (!act->active || !act->group) {
+		return;
+	}
+
+	if (ply_shot->active && is_touching(act, ply_shot)) {
+		if (act->group != GROUP_DIVER) act->active = 0;
+		
+		if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
+			ply_shot->active = 0;
+		}
+	}
+}
+
+void check_collision_against_player(actor *act) {	
+	if (!act->active || !act->group) {
+		return;
+	}
+
+	if (player->active && is_touching(act, player)) {
+		act->active = 0;		
+		if (act->group != GROUP_DIVER) {
+			player->active = 0;
 		}
 	}
 }
@@ -362,7 +377,14 @@ void check_collision_against_player_shot(actor *act) {
 void check_collisions() {
 	FOREACH_ACTOR(act) {
 		check_collision_against_player_shot(act);
+		check_collision_against_player(act);
 	}
+}
+
+void reset_actors_and_player() {
+	clear_actors();
+	init_actor(player, 116, 88, 3, 1, 2, 3);	
+	ply_shot->active = 0;
 }
 
 char gameplay_loop() {
@@ -372,10 +394,7 @@ char gameplay_loop() {
 	
 	animation_delay = 0;
 
-	clear_actors();
-	init_actor(player, 16, 32, 3, 1, 2, 3);
-	
-	ply_shot->active = 0;
+	reset_actors_and_player();
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -393,7 +412,11 @@ char gameplay_loop() {
 	
 	SMS_displayOn();
 	
-	while(1) {
+	while(1) {		
+		if (!player->active) {
+			reset_actors_and_player();
+		}
+	
 		handle_player_input();
 		handle_spawners();
 		move_actors();
@@ -402,32 +425,6 @@ char gameplay_loop() {
 		SMS_initSprites();	
 
 		draw_actors();
-
-		/*
-		// Player
-		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
-		draw_meta_sprite(32, 40, 3, 1, 20 + frame);
-		
-		// Player's torpedo
-		draw_meta_sprite(0, 16, 1, 1, 38 + torpedo_frame);
-		draw_meta_sprite(64, 40, 1, 1, 38 + 6 + torpedo_frame);
-		
-		// Enemy sub
-		draw_meta_sprite(16, 74, 3, 1, 64 + 2 + frame);
-		draw_meta_sprite(32, 108, 3, 1, 64 + 20 + frame);
-		
-		// Enemy sub's torpedo
-		draw_meta_sprite(0, 74, 1, 1, 64 + 38 + torpedo_frame);
-		draw_meta_sprite(64, 108, 1, 1, 64 + 38 + 6 + torpedo_frame);
-		
-		// Enemy fish
-		draw_meta_sprite(16, 142, 2, 1, 128 + fish_frame);
-		draw_meta_sprite(40, 142, 2, 1, 128 + 16 + fish_frame);
-		
-		// Diver
-		draw_meta_sprite(16, 166, 2, 1, 192 + fish_frame);
-		draw_meta_sprite(40, 166, 2, 1, 192 + 16 + fish_frame);
-		*/
 
 		SMS_finalizeSprites();		
 
