@@ -337,6 +337,7 @@ char is_touching(actor *act1, actor *act2) {
 	collider1 = act1;
 	collider2 = act2;
 
+/*
 	// Rough collision: check if their base vertical coordinates are on the same row
 	if (abs(collider1->y - collider2->y) > 16) {
 		return 0;
@@ -346,6 +347,7 @@ char is_touching(actor *act1, actor *act2) {
 	if (abs(collider1->x - collider2->x) > 24) {
 		return 0;
 	}
+	*/
 	
 	// Less rough collision on the Y axis
 	
@@ -386,28 +388,31 @@ char is_touching(actor *act1, actor *act2) {
 	return 1;
 }
 
-void check_collision_against_player_shot(actor *act) {	
-	if (!act->active || !act->group) {
+// Made global for performance
+actor *collider;
+
+void check_collision_against_player_shot() {	
+	if (!collider->active || !collider->group) {
 		return;
 	}
 
-	if (ply_shot->active && is_touching(act, ply_shot)) {
-		if (act->group != GROUP_DIVER) act->active = 0;
+	if (ply_shot->active && is_touching(collider, ply_shot)) {
+		if (collider->group != GROUP_DIVER) collider->active = 0;
 		
-		if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
+		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
 			ply_shot->active = 0;
 		}
 	}
 }
 
-void check_collision_against_player(actor *act) {	
-	if (!act->active || !act->group) {
+void check_collision_against_player() {	
+	if (!collider->active || !collider->group) {
 		return;
 	}
 
-	if (player->active && is_touching(act, player)) {
-		act->active = 0;		
-		if (act->group != GROUP_DIVER) {
+	if (player->active && is_touching(collider, player)) {
+		collider->active = 0;		
+		if (collider->group != GROUP_DIVER) {
 			player->active = 0;
 		}
 	}
@@ -415,8 +420,9 @@ void check_collision_against_player(actor *act) {
 
 void check_collisions() {
 	FOREACH_ACTOR(act) {
-		check_collision_against_player_shot(act);
-		check_collision_against_player(act);
+		collider = act;
+		check_collision_against_player_shot();
+		check_collision_against_player();
 	}
 }
 
