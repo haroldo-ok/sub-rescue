@@ -352,7 +352,9 @@ void check_collisions() {
 		if (act->active && act->group) {
 			if (ply_shot->active && is_touching(act, ply_shot)) {
 				act->active = 0;
-				ply_shot->active = 0;
+				if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
+					ply_shot->active = 0;
+				}
 			}
 		}
 	}
