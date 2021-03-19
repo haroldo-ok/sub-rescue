@@ -347,16 +347,21 @@ char is_touching(actor *act1, actor *act2) {
 	return 1;
 }
 
-void check_collisions() {
-	FOREACH_ACTOR(act) {
-		if (act->active && act->group) {
-			if (ply_shot->active && is_touching(act, ply_shot)) {
-				act->active = 0;
-				if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
-					ply_shot->active = 0;
-				}
+void check_collision_against_player_shot(actor *act) {	
+	if (act->active && act->group) {
+		if (ply_shot->active && is_touching(act, ply_shot)) {
+			if (act->group != GROUP_DIVER) act->active = 0;
+			
+			if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
+				ply_shot->active = 0;
 			}
 		}
+	}
+}
+
+void check_collisions() {
+	FOREACH_ACTOR(act) {
+		check_collision_against_player_shot(act);
 	}
 }
 
