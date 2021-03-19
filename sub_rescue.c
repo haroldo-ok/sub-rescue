@@ -293,6 +293,12 @@ char rectangles_intersect(
 }
 
 char is_touching(actor *act1, actor *act2) {
+	// Rough collisoon: check if they are on the same row
+	if (abs(act1->y - act2->y) > 16) {
+		return 0;
+	}
+	
+	// Less rough collision: check rectangle-to-rectangle intersection.
 	int r1_tlx = act1->x + act1->col_x;
 	int r1_tly = act1->y + act1->col_y;
 	int r2_tlx = act2->x + act2->col_x;
