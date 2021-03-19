@@ -19,6 +19,12 @@
 #define PLAYER_SHOT_SPEED (4)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
+#define PLAYER_BOTTOM (146)
+
+#define GROUP_ENEMY_SUB (1)
+#define GROUP_ENEMY_SHOT (2)
+#define GROUP_FISH (3)
+#define GROUP_DIVER (4)
 
 
 typedef struct actor {
@@ -34,6 +40,9 @@ typedef struct actor {
 	
 	unsigned char base_tile, frame_count;
 	unsigned char frame, frame_increment, frame_max;
+	
+	char group;
+	char col_x, col_y, col_w, col_h;
 } actor;
 
 actor actors[MAX_ACTORS];
@@ -79,6 +88,12 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	act->frame = 0;
 	act->frame_increment = char_w * (char_h << 1);
 	act->frame_max = act->frame_increment * frame_count;
+	
+	act->group = 0;
+	act->col_w = act->pixel_w - 4;
+	act->col_h = act->pixel_h - 4;
+	act->col_x = (act->pixel_w - act->col_w) >> 1;
+	act->col_y = (act->pixel_h - act->col_h) >> 1;
 }
 
 void clear_actors() {
@@ -91,6 +106,11 @@ void fire_shot(actor *shot, actor *shooter, char speed) {
 	if (shot->active) return;
 	
 	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
+	
+	shot->col_x = 0;
+	shot->col_y = 8;
+	shot->col_w = shot->pixel_w;
+	shot->col_h = shot->pixel_h;
 	
 	shot->facing_left = shooter->facing_left;
 	shot->spd_x = shooter->facing_left ? -speed : speed;
@@ -112,7 +132,11 @@ void move_actor(actor *act) {
 		}				
 	}
 	
-	if (act->autofire) fire_shot(act + 1, act, abs(act->spd_x) + 1);
+	if (act->autofire) {
+		actor *shot = act + 1;		
+		fire_shot(shot, act, abs(act->spd_x) + 1);
+		shot->group = GROUP_ENEMY_SHOT;
+	}
 }
 
 void move_actors() {
@@ -184,7 +208,7 @@ void handle_player_input() {
 		if (player->y > PLAYER_TOP) player->y -= PLAYER_SPEED;
 		shuffle_random(1);
 	} else if (joy & PORT_A_KEY_DOWN) {
-		if (player->y < SCREEN_H - player->pixel_h) player->y += PLAYER_SPEED;
+		if (player->y < PLAYER_BOTTOM) player->y += PLAYER_SPEED;
 		shuffle_random(2);
 	}
 	
@@ -226,22 +250,27 @@ void handle_spawners() {
 				case 0:
 					// Spawn a submarine
 					init_actor(act, 0, y, 3, 1, 66, 3);
-					act->spd_x = 3;
+					act->spd_x = 2;
 					act->autofire = 1;
+					act->group = GROUP_ENEMY_SUB;
 					break;
 					
 				case 1:
 					// Spawn a pair of fishes
 					init_actor(act, 0, y, 2, 1, 128, 4);
 					init_actor(act2, -64, y, 2, 1, 128, 4);
-					act->spd_x = 3;
-					act2->spd_x = 3;
+					act->spd_x = 2;
+					act->group = GROUP_FISH;
+
+					act2->spd_x = act->spd_x;
+					act2->group = act->group;
 					break;
 					
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
-					act->spd_x = 3;
+					act->spd_x = 2;
+					act->group = GROUP_DIVER;
 					break;
 				}
 				
@@ -269,6 +298,104 @@ void draw_background() {
 	}
 }
 
+actor *collider1, *collider2;
+int r1_tlx, r1_tly, r1_brx, r1_bry;
+int r2_tlx, r2_tly, r2_brx, r2_bry;
+
+char is_touching(actor *act1, actor *act2) {
+	// Use global variables for speed
+	collider1 = act1;
+	collider2 = act2;
+
+	// Rough collision: check if their base vertical coordinates are on the same row
+	if (abs(collider1->y - collider2->y) > 16) {
+		return 0;
+	}
+	
+	// Rough collision: check if their base horizontal coordinates are not too distant
+	if (abs(collider1->x - collider2->x) > 24) {
+		return 0;
+	}
+	
+	// Less rough collision on the Y axis
+	
+	r1_tly = collider1->y + collider1->col_y;
+	r1_bry = r1_tly + collider1->col_h;
+	r2_tly = collider2->y + collider2->col_y;
+	
+	// act1 is too far above
+	if (r1_bry < r2_tly) {
+		return 0;
+	}
+	
+	r2_bry = r2_tly + collider2->col_h;
+	
+	// act1 is too far below
+	if (r1_tly > r2_bry) {
+		return 0;
+	}
+	
+	// Less rough collision on the X axis
+	
+	r1_tlx = collider1->x + collider1->col_x;
+	r1_brx = r1_tlx + collider1->col_w;
+	r2_tlx = collider2->x + collider2->col_x;
+	
+	// act1 is too far to the left
+	if (r1_brx < r2_tlx) {
+		return 0;
+	}
+	
+	int r2_brx = r2_tlx + collider2->col_w;
+	
+	// act1 is too far to the left
+	if (r1_tlx > r2_brx) {
+		return 0;
+	}
+	
+	return 1;
+}
+
+void check_collision_against_player_shot(actor *act) {	
+	if (!act->active || !act->group) {
+		return;
+	}
+
+	if (ply_shot->active && is_touching(act, ply_shot)) {
+		if (act->group != GROUP_DIVER) act->active = 0;
+		
+		if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
+			ply_shot->active = 0;
+		}
+	}
+}
+
+void check_collision_against_player(actor *act) {	
+	if (!act->active || !act->group) {
+		return;
+	}
+
+	if (player->active && is_touching(act, player)) {
+		act->active = 0;		
+		if (act->group != GROUP_DIVER) {
+			player->active = 0;
+		}
+	}
+}
+
+void check_collisions() {
+	FOREACH_ACTOR(act) {
+		check_collision_against_player_shot(act);
+		check_collision_against_player(act);
+	}
+}
+
+void reset_actors_and_player() {
+	clear_actors();
+	init_actor(player, 116, 88, 3, 1, 2, 3);	
+	ply_shot->active = 0;
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -276,10 +403,7 @@ char gameplay_loop() {
 	
 	animation_delay = 0;
 
-	clear_actors();
-	init_actor(player, 16, 32, 3, 1, 2, 3);
-	
-	ply_shot->active = 0;
+	reset_actors_and_player();
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -297,40 +421,19 @@ char gameplay_loop() {
 	
 	SMS_displayOn();
 	
-	while(1) {
+	while(1) {		
+		if (!player->active) {
+			reset_actors_and_player();
+		}
+	
 		handle_player_input();
 		handle_spawners();
 		move_actors();
+		check_collisions();
 		
 		SMS_initSprites();	
 
 		draw_actors();
-
-		/*
-		// Player
-		draw_meta_sprite(16, 16, 3, 1, 2 + frame);
-		draw_meta_sprite(32, 40, 3, 1, 20 + frame);
-		
-		// Player's torpedo
-		draw_meta_sprite(0, 16, 1, 1, 38 + torpedo_frame);
-		draw_meta_sprite(64, 40, 1, 1, 38 + 6 + torpedo_frame);
-		
-		// Enemy sub
-		draw_meta_sprite(16, 74, 3, 1, 64 + 2 + frame);
-		draw_meta_sprite(32, 108, 3, 1, 64 + 20 + frame);
-		
-		// Enemy sub's torpedo
-		draw_meta_sprite(0, 74, 1, 1, 64 + 38 + torpedo_frame);
-		draw_meta_sprite(64, 108, 1, 1, 64 + 38 + 6 + torpedo_frame);
-		
-		// Enemy fish
-		draw_meta_sprite(16, 142, 2, 1, 128 + fish_frame);
-		draw_meta_sprite(40, 142, 2, 1, 128 + 16 + fish_frame);
-		
-		// Diver
-		draw_meta_sprite(16, 166, 2, 1, 192 + fish_frame);
-		draw_meta_sprite(40, 166, 2, 1, 192 + 16 + fish_frame);
-		*/
 
 		SMS_finalizeSprites();		
 
