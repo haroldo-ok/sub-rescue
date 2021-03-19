@@ -19,6 +19,7 @@
 #define PLAYER_SHOT_SPEED (4)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
+#define PLAYER_BOTTOM (146)
 
 #define GROUP_ENEMY_SUB (1)
 #define GROUP_ENEMY_SHOT (2)
@@ -207,7 +208,7 @@ void handle_player_input() {
 		if (player->y > PLAYER_TOP) player->y -= PLAYER_SPEED;
 		shuffle_random(1);
 	} else if (joy & PORT_A_KEY_DOWN) {
-		if (player->y < SCREEN_H - player->pixel_h) player->y += PLAYER_SPEED;
+		if (player->y < PLAYER_BOTTOM) player->y += PLAYER_SPEED;
 		shuffle_random(2);
 	}
 	
@@ -305,7 +306,7 @@ char is_touching(actor *act1, actor *act2) {
 	// Use global variables for speed
 	collider1 = act1;
 	collider2 = act2;
-	
+
 	// Rough collision: check if their base vertical coordinates are on the same row
 	if (abs(collider1->y - collider2->y) > 16) {
 		return 0;
