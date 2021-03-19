@@ -34,6 +34,9 @@ typedef struct actor {
 	
 	unsigned char base_tile, frame_count;
 	unsigned char frame, frame_increment, frame_max;
+	
+	char group;
+	char col_x, col_y, col_w, col_h;
 } actor;
 
 actor actors[MAX_ACTORS];
@@ -79,6 +82,12 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	act->frame = 0;
 	act->frame_increment = char_w * (char_h << 1);
 	act->frame_max = act->frame_increment * frame_count;
+	
+	act->group = 0;
+	act->col_w = act->pixel_w - 4;
+	act->col_h = act->pixel_h - 4;
+	act->col_x = (act->pixel_w - act->col_w) >> 1;
+	act->col_y = (act->pixel_h - act->col_h) >> 1;
 }
 
 void clear_actors() {
