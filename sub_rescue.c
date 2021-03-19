@@ -292,29 +292,54 @@ void draw_background() {
 	}
 }
 
-// Based on https://www.hackerearth.com/practice/notes/how-to-check-if-two-rectangles-intersect-or-not/
-char rectangles_intersect(
-	int r1_tlx, int r1_tly, int r1_brx, int r1_bry,
-	int r2_tlx, int r2_tly, int r2_brx, int r2_bry) {
-    return (r1_tlx  <  r2_brx) && (r1_brx > r2_tlx) && (r1_tly < r2_bry) && (r1_bry > r2_tly);
-}
-
 char is_touching(actor *act1, actor *act2) {
-	// Rough collisoon: check if they are on the same row
+	// Rough collision: check if their base vertical coordinates are on the same row
 	if (abs(act1->y - act2->y) > 16) {
 		return 0;
 	}
 	
-	// Less rough collision: check rectangle-to-rectangle intersection.
-	int r1_tlx = act1->x + act1->col_x;
+	// Rough collision: check if their base horizontal coordinates are not too distant
+	if (abs(act1->x - act2->x) > 24) {
+		return 0;
+	}
+	
+	// Less rough collision on the Y axis
+	
 	int r1_tly = act1->y + act1->col_y;
-	int r2_tlx = act2->x + act2->col_x;
+	int r1_bry = r1_tly + act1->col_h;
 	int r2_tly = act2->y + act2->col_y;
 	
-	return rectangles_intersect(
-		r1_tlx, r1_tly, r1_tlx + act1->col_w, r1_tly + act1->col_h,
-		r2_tlx, r2_tly, r2_tlx + act2->col_w, r2_tly + act2->col_h
-	);
+	// act1 is too far above
+	if (r1_bry < r2_tly) {
+		return 0;
+	}
+	
+	int r2_bry = r2_tly + act2->col_h;
+	
+	// act1 is too far below
+	if (r1_tly > r2_bry) {
+		return 0;
+	}
+	
+	// Less rough collision on the X axis
+	
+	int r1_tlx = act1->x + act1->col_x;
+	int r1_brx = r1_tlx + act1->col_w;
+	int r2_tlx = act2->x + act2->col_x;
+	
+	// act1 is too far to the left
+	if (r1_brx < r2_tlx) {
+		return 0;
+	}
+	
+	int r2_brx = r2_tlx + act2->col_w;
+	
+	// act1 is too far to the left
+	if (r1_tlx > r2_brx) {
+		return 0;
+	}
+	
+	return 1;
 }
 
 void check_collisions() {
