@@ -54,46 +54,55 @@ actor *first_spawner = actors + 2;
 int animation_delay;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
-	for (char i = h; i; i--) {
+	static char i, j;
+	static int sx, sy;
+	static unsigned char st;
+	
+	sy = y;
+	st = tile;
+	for (i = h; i; i--) {
 		if (y >= 0 && y < SCREEN_H) {
-			int sx = x;
-			for (char j = w; j; j--) {
+			sx = x;
+			for (j = w; j; j--) {
 				if (sx >= 0 && sx < SCREEN_W) {
-					SMS_addSprite(sx, y, tile);
+					SMS_addSprite(sx, sy, tile);
 				}
 				sx += 8;
 				tile += 2;
 			}
 		}
-		y += 16;
+		sy += 16;
 	}
 }
 
 void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char base_tile, unsigned char frame_count) {
-	act->active = 1;
+	static actor *sa;
+	sa = act;
 	
-	act->x = x;
-	act->y = y;
-	act->spd_x = 0;
-	act->facing_left = 1;
-	act->autofire = 0;
+	sa->active = 1;
 	
-	act->char_w = char_w;
-	act->char_h = char_h;
-	act->pixel_w = char_w << 3;
-	act->pixel_h = char_h << 4;
+	sa->x = x;
+	sa->y = y;
+	sa->spd_x = 0;
+	sa->facing_left = 1;
+	sa->autofire = 0;
 	
-	act->base_tile = base_tile;
-	act->frame_count = frame_count;
-	act->frame = 0;
-	act->frame_increment = char_w * (char_h << 1);
-	act->frame_max = act->frame_increment * frame_count;
+	sa->char_w = char_w;
+	sa->char_h = char_h;
+	sa->pixel_w = char_w << 3;
+	sa->pixel_h = char_h << 4;
 	
-	act->group = 0;
-	act->col_w = act->pixel_w - 4;
-	act->col_h = act->pixel_h - 4;
-	act->col_x = (act->pixel_w - act->col_w) >> 1;
-	act->col_y = (act->pixel_h - act->col_h) >> 1;
+	sa->base_tile = base_tile;
+	sa->frame_count = frame_count;
+	sa->frame = 0;
+	sa->frame_increment = char_w * (char_h << 1);
+	sa->frame_max = sa->frame_increment * frame_count;
+	
+	sa->group = 0;
+	sa->col_w = sa->pixel_w - 4;
+	sa->col_h = sa->pixel_h - 4;
+	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
+	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
 }
 
 void clear_actors() {
@@ -102,40 +111,49 @@ void clear_actors() {
 	}
 }
 
-void fire_shot(actor *shot, actor *shooter, char speed) {
+void fire_shot(actor *shot, actor *shooter, char speed) {	
+	static actor *_shot, *_shooter;
+
 	if (shot->active) return;
 	
-	init_actor(shot, shooter->x, shooter->y, 1, 1, shooter->base_tile + 36, 3);
+	_shot = shot;
+	_shooter = shooter;
 	
-	shot->col_x = 0;
-	shot->col_y = 8;
-	shot->col_w = shot->pixel_w;
-	shot->col_h = shot->pixel_h;
+	init_actor(_shot, _shooter->x, _shooter->y, 1, 1, _shooter->base_tile + 36, 3);
 	
-	shot->facing_left = shooter->facing_left;
-	shot->spd_x = shooter->facing_left ? -speed : speed;
-	if (!shooter->facing_left) {
-		shot->x += shooter->pixel_w - 8;
+	_shot->col_x = 0;
+	_shot->col_y = 8;
+	_shot->col_w = _shot->pixel_w;
+	_shot->col_h = _shot->pixel_h;
+	
+	_shot->facing_left = _shooter->facing_left;
+	_shot->spd_x = _shooter->facing_left ? -speed : speed;
+	if (!_shooter->facing_left) {
+		_shot->x += _shooter->pixel_w - 8;
 	}
 }
 
 void move_actor(actor *act) {
+	static actor *_act, *_shot;
+	
 	if (!act->active) return;
 	
-	if (act->spd_x) {
-		act->x += act->spd_x;
+	_act = act;
+	
+	if (_act->spd_x) {
+		_act->x += _act->spd_x;
 		
-		if (act->spd_x < 0) {
-			if (act->x + act->pixel_w < 0) act->active = 0;
+		if (_act->spd_x < 0) {
+			if (_act->x + _act->pixel_w < 0) _act->active = 0;
 		} else {
-			if (act->x >= SCREEN_W) act->active = 0;
+			if (_act->x >= SCREEN_W) _act->active = 0;
 		}				
 	}
 	
-	if (act->autofire) {
-		actor *shot = act + 1;		
-		fire_shot(shot, act, abs(act->spd_x) + 1);
-		shot->group = GROUP_ENEMY_SHOT;
+	if (_act->autofire) {
+		actor *_shot = _act + 1;		
+		fire_shot(_shot, _act, abs(_act->spd_x) + 1);
+		_shot->group = GROUP_ENEMY_SHOT;
 	}
 }
 
@@ -146,20 +164,25 @@ void move_actors() {
 }
 
 void draw_actor(actor *act) {
+	static actor *_act;
+	static unsigned char frame_tile;
+	
 	if (!act->active) {
 		return;
 	}
 	
-	unsigned char frame_tile = act->base_tile + act->frame;
-	if (!act->facing_left) {
-		frame_tile += act->frame_max;
+	_act = act;
+	
+	frame_tile = _act->base_tile + _act->frame;
+	if (!_act->facing_left) {
+		frame_tile += _act->frame_max;
 	}
 	
-	draw_meta_sprite(act->x, act->y, act->char_w, act->char_h, frame_tile);	
+	draw_meta_sprite(_act->x, _act->y, _act->char_w, _act->char_h, frame_tile);	
 
 	if (!animation_delay) {
-		act->frame += act->frame_increment;
-		if (act->frame >= act->frame_max) act->frame = 0;
+		_act->frame += _act->frame_increment;
+		if (_act->frame >= _act->frame_max) _act->frame = 0;
 	}
 }
 
@@ -228,23 +251,30 @@ void handle_player_input() {
 }
 
 void adjust_facing(actor *act, char facing_left) {
-	act->facing_left = facing_left;
+	static actor *_act;
+	_act = act;
+	
+	_act->facing_left = facing_left;
 	if (facing_left) {
-		act->x = SCREEN_W - act->x;
-		act->spd_x = -act->spd_x;
+		_act->x = SCREEN_W - _act->x;
+		_act->spd_x = -_act->spd_x;
 	} else {
-		act->x -= act->pixel_w;
+		_act->x -= _act->pixel_w;
 	}
 }
 
 void handle_spawners() {
-	actor *act = first_spawner;
-	for (int i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
-		actor *act2 = act + 1;
+	static actor *act, *act2;
+	static char i, facing_left, thing_to_spawn;
+	static int y;
+	
+	act = first_spawner;
+	for (i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
+		act2 = act + 1;
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
-				char facing_left = (rand() >> 4) & 1;
-				char thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
+				facing_left = (rand() >> 4) & 1;
+				thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
 				
 				switch (thing_to_spawn) {
 				case 0:
@@ -298,15 +328,16 @@ void draw_background() {
 	}
 }
 
-actor *collider1, *collider2;
-int r1_tlx, r1_tly, r1_brx, r1_bry;
-int r2_tlx, r2_tly, r2_brx, r2_bry;
-
 char is_touching(actor *act1, actor *act2) {
+	static actor *collider1, *collider2;
+	static int r1_tlx, r1_tly, r1_brx, r1_bry;
+	static int r2_tlx, r2_tly, r2_bry;
+
 	// Use global variables for speed
 	collider1 = act1;
 	collider2 = act2;
 
+/*
 	// Rough collision: check if their base vertical coordinates are on the same row
 	if (abs(collider1->y - collider2->y) > 16) {
 		return 0;
@@ -316,6 +347,7 @@ char is_touching(actor *act1, actor *act2) {
 	if (abs(collider1->x - collider2->x) > 24) {
 		return 0;
 	}
+	*/
 	
 	// Less rough collision on the Y axis
 	
@@ -356,28 +388,31 @@ char is_touching(actor *act1, actor *act2) {
 	return 1;
 }
 
-void check_collision_against_player_shot(actor *act) {	
-	if (!act->active || !act->group) {
+// Made global for performance
+actor *collider;
+
+void check_collision_against_player_shot() {	
+	if (!collider->active || !collider->group) {
 		return;
 	}
 
-	if (ply_shot->active && is_touching(act, ply_shot)) {
-		if (act->group != GROUP_DIVER) act->active = 0;
+	if (ply_shot->active && is_touching(collider, ply_shot)) {
+		if (collider->group != GROUP_DIVER) collider->active = 0;
 		
-		if (act->group != GROUP_DIVER && act->group != GROUP_ENEMY_SHOT) {
+		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
 			ply_shot->active = 0;
 		}
 	}
 }
 
-void check_collision_against_player(actor *act) {	
-	if (!act->active || !act->group) {
+void check_collision_against_player() {	
+	if (!collider->active || !collider->group) {
 		return;
 	}
 
-	if (player->active && is_touching(act, player)) {
-		act->active = 0;		
-		if (act->group != GROUP_DIVER) {
+	if (player->active && is_touching(collider, player)) {
+		collider->active = 0;		
+		if (collider->group != GROUP_DIVER) {
 			player->active = 0;
 		}
 	}
@@ -385,8 +420,9 @@ void check_collision_against_player(actor *act) {
 
 void check_collisions() {
 	FOREACH_ACTOR(act) {
-		check_collision_against_player_shot(act);
-		check_collision_against_player(act);
+		collider = act;
+		check_collision_against_player_shot();
+		check_collision_against_player();
 	}
 }
 
