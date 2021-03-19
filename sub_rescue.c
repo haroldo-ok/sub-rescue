@@ -121,7 +121,11 @@ void move_actor(actor *act) {
 		}				
 	}
 	
-	if (act->autofire) fire_shot(act + 1, act, abs(act->spd_x) + 1);
+	if (act->autofire) {
+		actor *shot = act + 1;		
+		fire_shot(shot, act, abs(act->spd_x) + 1);
+		shot->group = 4;
+	}
 }
 
 void move_actors() {
@@ -237,6 +241,7 @@ void handle_spawners() {
 					init_actor(act, 0, y, 3, 1, 66, 3);
 					act->spd_x = 3;
 					act->autofire = 1;
+					act->group = 1;
 					break;
 					
 				case 1:
@@ -245,12 +250,14 @@ void handle_spawners() {
 					init_actor(act2, -64, y, 2, 1, 128, 4);
 					act->spd_x = 3;
 					act2->spd_x = 3;
+					act->group = 2;
 					break;
 					
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
 					act->spd_x = 3;
+					act->group = 3;
 					break;
 				}
 				
@@ -274,6 +281,36 @@ void draw_background() {
 			
 			SMS_setTile(tile_number);
 			ch++;
+		}
+	}
+}
+
+// Based on https://www.hackerearth.com/practice/notes/how-to-check-if-two-rectangles-intersect-or-not/
+char rectangles_intersect(
+	int r1_tlx, int r1_tly, int r1_brx, int r1_bry,
+	int r2_tlx, int r2_tly, int r2_brx, int r2_bry) {
+    return (r1_tlx  <  r2_brx) && (r1_brx > r2_tlx) && (r1_tly < r2_bry) && (r1_bry > r2_tly);
+}
+
+char is_touching(actor *act1, actor *act2) {
+	int r1_tlx = act1->x + act1->col_x;
+	int r1_tly = act1->y + act1->col_y;
+	int r2_tlx = act2->x + act2->col_x;
+	int r2_tly = act2->y + act2->col_y;
+	
+	return rectangles_intersect(
+		r1_tlx, r1_tly, r1_tlx + act1->col_w, r1_tly + act1->col_h,
+		r2_tlx, r2_tly, r2_tlx + act2->col_w, r2_tly + act2->col_h
+	);
+}
+
+void check_collisions() {
+	FOREACH_ACTOR(act) {
+		if (act->active && act->group) {
+			if (ply_shot->active && is_touching(act, ply_shot)) {
+				act->active = 0;
+				ply_shot->active = 0;
+			}
 		}
 	}
 }
@@ -310,6 +347,7 @@ char gameplay_loop() {
 		handle_player_input();
 		handle_spawners();
 		move_actors();
+		check_collisions();
 		
 		SMS_initSprites();	
 
