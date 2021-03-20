@@ -39,6 +39,10 @@
 
 #define LIFE_CHARS (6)
 
+#define STATE_START (1)
+#define STATE_GAMEPLAY (2)
+#define STATE_GAMEOVER (3)
+
 typedef struct actor {
 	char active;
 	
@@ -667,7 +671,7 @@ char gameplay_loop() {
 	
 	set_score(0);
 	set_rescue(0);
-	set_life(3);
+	set_life(4);
 	set_oxygen(0);	
 	oxygen.dirty = 1;
 	
@@ -694,7 +698,7 @@ char gameplay_loop() {
 	
 	initialize_level();
 	
-	while(1) {		
+	while(1) {	
 		if (rescue.value == RESCUE_CHARS && player->y < PLAYER_TOP + 4) {
 			level.number++;
 			initialize_level();
@@ -705,6 +709,10 @@ char gameplay_loop() {
 			reset_actors_and_player();
 			set_oxygen(0);
 			level.starting = 1;
+		}
+		
+		if (!life.value) {
+			return STATE_GAMEOVER;
 		}
 	
 		handle_player_input();
@@ -745,13 +753,32 @@ char gameplay_loop() {
 	}
 }
 
+char handle_gameover() {
+	return STATE_START;
+}
+
 void main() {
+	char state = STATE_START;
+	
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 	
-	while (1) {			
-		gameplay_loop();
+	while (1) {
+		switch (state) {
+			
+		case STATE_START:
+			state = STATE_GAMEPLAY;
+			break;
+			
+		case STATE_GAMEPLAY:
+			state = gameplay_loop();
+			break;
+			
+		case STATE_GAMEOVER:
+			state = handle_gameover();
+			break;
+		}
 	}
 }
 
