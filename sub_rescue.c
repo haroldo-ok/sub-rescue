@@ -67,10 +67,15 @@ struct score {
 } score;
 
 struct oxygen {
-	unsigned int value;
+	int value;
 	unsigned char last_shifted_value;
 	char dirty;
 } oxygen;
+
+struct level {
+	unsigned int number;
+	char starting;
+} level;
 
 void add_score(unsigned int value);
 
@@ -503,7 +508,8 @@ void draw_score_if_needed() {
 	if (score.dirty) draw_score();
 }
 
-void set_oxygen(unsigned int value) {
+void set_oxygen(int value) {
+	if (value < 0) value = 0;
 	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
 	
 	oxygen.value = value;
@@ -514,10 +520,14 @@ void set_oxygen(unsigned int value) {
 	oxygen.last_shifted_value = shifted_value;
 }
 
+void add_oxygen(unsigned int value) {
+	set_oxygen(oxygen.value + value);
+}
+
 void draw_oxygen() {
 	SMS_setNextTileatXY(((32 - OXYGEN_CHARS) >> 1) + 1, 2);
 	
-	char remaining = oxygen.last_shifted_value;
+	int remaining = oxygen.last_shifted_value;
 	for (char i = OXYGEN_CHARS; i; i--) {
 		if (remaining > OXYGEN_RESOLUTION) {
 			SMS_setTile(127 + TILE_USE_SPRITE_PALETTE);
@@ -534,6 +544,19 @@ void draw_oxygen_if_needed() {
 	if (oxygen.dirty) draw_oxygen();
 }
 
+void handle_oxygen() {
+	if (level.starting) {			
+		add_oxygen(4);
+		level.starting = oxygen.value < OXYGEN_MAX;
+	} else {
+		if (player->y < PLAYER_TOP + 4) {
+			add_oxygen(5);
+		} else {
+			add_oxygen(-1);
+		}
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -544,6 +567,9 @@ char gameplay_loop() {
 	set_score(0);
 	set_oxygen(0);
 	oxygen.dirty = 1;
+	
+	level.number = 1;
+	level.starting = 1;
 
 	reset_actors_and_player();
 
@@ -569,11 +595,13 @@ char gameplay_loop() {
 		}
 	
 		handle_player_input();
-		handle_spawners();
-		move_actors();
-		check_collisions();
+		handle_oxygen();
 		
-		set_oxygen(oxygen.value + 1);
+		if (!level.starting) {			
+			handle_spawners();
+			move_actors();
+			check_collisions();			
+		}
 		
 		SMS_initSprites();	
 
@@ -612,6 +640,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,1, 2021,3,15, "Haroldo-OK\\2021", "Sub Rescue",
+SMS_EMBED_SDSC_HEADER(0,1, 2021,3,20, "Haroldo-OK\\2021", "Sub Rescue",
   "A subaquatic shoot-em-up.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
