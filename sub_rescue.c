@@ -553,6 +553,7 @@ void handle_oxygen() {
 			add_oxygen(6);
 		} else {
 			add_oxygen(-1);
+			if (!oxygen.value) player->active = 0;
 		}
 	}
 }
