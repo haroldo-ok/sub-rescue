@@ -26,7 +26,7 @@
 #define GROUP_FISH (3)
 #define GROUP_DIVER (4)
 
-#define SCORE_DIGITS (5)
+#define SCORE_DIGITS (6)
 
 
 typedef struct actor {
@@ -45,6 +45,8 @@ typedef struct actor {
 	
 	char group;
 	char col_x, col_y, col_w, col_h;
+	
+	unsigned int score;
 } actor;
 
 actor actors[MAX_ACTORS];
@@ -59,6 +61,8 @@ struct score{
 	unsigned int value;
 	char dirty;
 } score;
+
+void add_score(unsigned int value);
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -110,6 +114,8 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	sa->col_h = sa->pixel_h - 4;
 	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
 	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
+	
+	sa->score = 100;
 }
 
 void clear_actors() {
@@ -290,6 +296,7 @@ void handle_spawners() {
 					act->spd_x = 2;
 					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
+					act->score = 10;
 					break;
 					
 				case 1:
@@ -298,9 +305,11 @@ void handle_spawners() {
 					init_actor(act2, -64, y, 2, 1, 128, 4);
 					act->spd_x = 2;
 					act->group = GROUP_FISH;
+					act->score = 5;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
+					act2->score = act->score;
 					break;
 					
 				case 2:
@@ -308,6 +317,7 @@ void handle_spawners() {
 					init_actor(act, 0, y, 2, 1, 192, 4);
 					act->spd_x = 2;
 					act->group = GROUP_DIVER;
+					act->score = 20;
 					break;
 				}
 				
@@ -404,11 +414,14 @@ void check_collision_against_player_shot() {
 	}
 
 	if (ply_shot->active && is_touching(collider, ply_shot)) {
-		if (collider->group != GROUP_DIVER) collider->active = 0;
+		if (collider->group != GROUP_DIVER) {
+			collider->active = 0;
+			add_score(collider->score);
+		}
 		
 		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
 			ply_shot->active = 0;
-		}
+		}		
 	}
 }
 
@@ -422,6 +435,8 @@ void check_collision_against_player() {
 		if (collider->group != GROUP_DIVER) {
 			player->active = 0;
 		}
+		
+		add_score(collider->score);
 	}
 }
 
@@ -453,15 +468,20 @@ void draw_score() {
 	
 	memset(buffer, -1, sizeof buffer);
 	
-	// Calculate the digits
+	// Last digit is always zero
 	char *d = buffer + SCORE_DIGITS - 1;
+	*d = 0;
+	d--;
+	
+	// Calculate the digits
 	unsigned int remaining = score.value;
-	do {
+	while (remaining) {
 		*d = remaining % 10;		
 		remaining = remaining / 10;
 		d--;
-	} while (remaining);
+	}
 		
+	// Draw the digits
 	d = buffer;
 	SMS_setNextTileatXY(((32 - SCORE_DIGITS) >> 1) + 1, 2);
 	for (char i = SCORE_DIGITS; i; i--, d++) {
