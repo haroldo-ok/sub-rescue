@@ -28,6 +28,8 @@
 
 #define SCORE_DIGITS (6)
 
+#define LEVEL_DIGITS (3)
+
 #define OXYGEN_CHARS (8)
 #define OXYGEN_RESOLUTION (4)
 #define OXYGEN_SHIFT (4)
@@ -526,6 +528,28 @@ void draw_score_if_needed() {
 	if (score.dirty) draw_score();
 }
 
+void draw_level_number() {
+	static char buffer[LEVEL_DIGITS];
+	
+	memset(buffer, -1, sizeof buffer);
+	
+	// Calculate the digits
+	char *d = buffer + LEVEL_DIGITS - 1;
+	unsigned int remaining = level.number;
+	do {
+		*d = remaining % 10;		
+		remaining = remaining / 10;
+		d--;
+	} while (remaining);
+		
+	// Draw the digits
+	d = buffer;
+	SMS_setNextTileatXY(2, 1);
+	for (char i = LEVEL_DIGITS; i; i--, d++) {
+		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
+	}
+}
+
 void set_rescue(int value) {
 	if (value < 0) value = 0;
 	if (value > RESCUE_CHARS) value = RESCUE_CHARS;
@@ -685,6 +709,7 @@ char gameplay_loop() {
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 		
+		draw_level_number();
 		draw_score_if_needed();
 		draw_rescue_if_needed();
 		draw_life_if_needed();
