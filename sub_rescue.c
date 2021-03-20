@@ -33,6 +33,8 @@
 #define OXYGEN_SHIFT (4)
 #define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
 
+#define RESCUE_CHARS (6)
+
 typedef struct actor {
 	char active;
 	
@@ -66,6 +68,11 @@ struct score {
 	char dirty;
 } score;
 
+struct rescue {
+	int value;
+	char dirty;
+} rescue;
+
 struct oxygen {
 	int value;
 	unsigned char last_shifted_value;
@@ -78,6 +85,7 @@ struct level {
 } level;
 
 void add_score(unsigned int value);
+void add_rescue(int value);
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -447,7 +455,9 @@ void check_collision_against_player() {
 
 	if (player->active && is_touching(collider, player)) {
 		collider->active = 0;		
-		if (collider->group != GROUP_DIVER) {
+		if (collider->group == GROUP_DIVER) {
+			add_rescue(1);
+		} else {
 			player->active = 0;
 		}
 		
@@ -508,6 +518,31 @@ void draw_score_if_needed() {
 	if (score.dirty) draw_score();
 }
 
+void set_rescue(int value) {
+	if (value < 0) value = 0;
+	if (value > RESCUE_CHARS) value = RESCUE_CHARS;
+	rescue.value = value;
+	rescue.dirty = 1;	
+}
+
+void add_rescue(int value) {
+	set_rescue(rescue.value + value);	
+}
+
+void draw_rescue() {
+	SMS_setNextTileatXY(32 - RESCUE_CHARS - 2, 2);
+	
+	int remaining = rescue.value;
+	for (char i = RESCUE_CHARS; i; i--) {
+		SMS_setTile((remaining > 0 ? 63 : 62) + TILE_USE_SPRITE_PALETTE);
+		remaining --;
+	}
+}
+
+void draw_rescue_if_needed() {
+	if (rescue.dirty) draw_rescue();
+}
+
 void set_oxygen(int value) {
 	if (value < 0) value = 0;
 	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
@@ -566,7 +601,8 @@ char gameplay_loop() {
 	animation_delay = 0;
 	
 	set_score(0);
-	set_oxygen(0);
+	set_rescue(0);
+	set_oxygen(0);	
 	oxygen.dirty = 1;
 	
 	level.number = 1;
@@ -616,6 +652,7 @@ char gameplay_loop() {
 		SMS_copySpritestoSAT();
 		
 		draw_score_if_needed();
+		draw_rescue_if_needed();
 		draw_oxygen_if_needed();
 		
 		frame += 6;
