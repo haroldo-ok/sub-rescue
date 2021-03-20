@@ -28,6 +28,10 @@
 
 #define SCORE_DIGITS (6)
 
+#define OXYGEN_CHARS (8)
+#define OXYGEN_RESOLUTION (4)
+#define OXYGEN_SHIFT (4)
+#define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
 
 typedef struct actor {
 	char active;
@@ -57,10 +61,16 @@ actor *first_spawner = actors + 2;
 
 int animation_delay;
 
-struct score{
+struct score {
 	unsigned int value;
 	char dirty;
 } score;
+
+struct oxygen {
+	unsigned int value;
+	unsigned char last_shifted_value;
+	char dirty;
+} oxygen;
 
 void add_score(unsigned int value);
 
@@ -483,7 +493,7 @@ void draw_score() {
 		
 	// Draw the digits
 	d = buffer;
-	SMS_setNextTileatXY(((32 - SCORE_DIGITS) >> 1) + 1, 2);
+	SMS_setNextTileatXY(((32 - SCORE_DIGITS) >> 1) + 1, 1);
 	for (char i = SCORE_DIGITS; i; i--, d++) {
 		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
 	}
@@ -491,6 +501,37 @@ void draw_score() {
 
 void draw_score_if_needed() {
 	if (score.dirty) draw_score();
+}
+
+void set_oxygen(unsigned int value) {
+	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
+	
+	oxygen.value = value;
+	
+	unsigned char shifted_value = value >> OXYGEN_SHIFT;
+	
+	oxygen.dirty = shifted_value != oxygen.last_shifted_value;
+	oxygen.last_shifted_value = shifted_value;
+}
+
+void draw_oxygen() {
+	SMS_setNextTileatXY(((32 - OXYGEN_CHARS) >> 1) + 1, 2);
+	
+	char remaining = oxygen.last_shifted_value;
+	for (char i = OXYGEN_CHARS; i; i--) {
+		if (remaining > OXYGEN_RESOLUTION) {
+			SMS_setTile(127 + TILE_USE_SPRITE_PALETTE);
+			remaining -= OXYGEN_RESOLUTION;
+			if (remaining < 0) remaining = 0;
+		} else {
+			SMS_setTile(119 + (remaining << 1) + TILE_USE_SPRITE_PALETTE);
+			remaining = 0;
+		}
+	}
+}
+
+void draw_oxygen_if_needed() {
+	if (oxygen.dirty) draw_oxygen();
 }
 
 char gameplay_loop() {
@@ -501,6 +542,8 @@ char gameplay_loop() {
 	animation_delay = 0;
 	
 	set_score(0);
+	set_oxygen(0);
+	oxygen.dirty = 1;
 
 	reset_actors_and_player();
 
@@ -530,6 +573,8 @@ char gameplay_loop() {
 		move_actors();
 		check_collisions();
 		
+		set_oxygen(oxygen.value + 1);
+		
 		SMS_initSprites();	
 
 		draw_actors();
@@ -540,6 +585,7 @@ char gameplay_loop() {
 		SMS_copySpritestoSAT();
 		
 		draw_score_if_needed();
+		draw_oxygen_if_needed();
 		
 		frame += 6;
 		if (frame > 12) frame = 0;
