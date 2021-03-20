@@ -35,6 +35,8 @@
 
 #define RESCUE_CHARS (6)
 
+#define LIFE_CHARS (6)
+
 typedef struct actor {
 	char active;
 	
@@ -73,6 +75,11 @@ struct rescue {
 	char dirty;
 } rescue;
 
+struct life {
+	int value;
+	char dirty;
+} life;
+
 struct oxygen {
 	int value;
 	unsigned char last_shifted_value;
@@ -86,6 +93,7 @@ struct level {
 
 void add_score(unsigned int value);
 void add_rescue(int value);
+void add_life(int value);
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -543,6 +551,30 @@ void draw_rescue_if_needed() {
 	if (rescue.dirty) draw_rescue();
 }
 
+void set_life(int value) {
+	if (value < 0) value = 0;
+	life.value = value;
+	life.dirty = 1;	
+}
+
+void add_life(int value) {
+	set_life(life.value + value);	
+}
+
+void draw_life() {
+	SMS_setNextTileatXY(2, 2);
+	
+	int remaining = life.value;
+	for (char i = LIFE_CHARS; i; i--) {
+		SMS_setTile((remaining > 0 ? 61 : 60) + TILE_USE_SPRITE_PALETTE);
+		remaining --;
+	}
+}
+
+void draw_life_if_needed() {
+	if (rescue.dirty) draw_life();
+}
+
 void set_oxygen(int value) {
 	if (value < 0) value = 0;
 	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
@@ -602,6 +634,7 @@ char gameplay_loop() {
 	
 	set_score(0);
 	set_rescue(0);
+	set_life(3);
 	set_oxygen(0);	
 	oxygen.dirty = 1;
 	
@@ -628,6 +661,7 @@ char gameplay_loop() {
 	
 	while(1) {		
 		if (!player->active) {
+			add_life(-1);
 			reset_actors_and_player();
 			set_oxygen(0);
 			level.starting = 1;
@@ -653,6 +687,7 @@ char gameplay_loop() {
 		
 		draw_score_if_needed();
 		draw_rescue_if_needed();
+		draw_life_if_needed();
 		draw_oxygen_if_needed();
 		
 		frame += 6;
