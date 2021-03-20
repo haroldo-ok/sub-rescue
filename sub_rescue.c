@@ -26,6 +26,8 @@
 #define GROUP_FISH (3)
 #define GROUP_DIVER (4)
 
+#define SCORE_DIGITS (5)
+
 
 typedef struct actor {
 	char active;
@@ -52,6 +54,11 @@ actor *ply_shot = actors + 1;
 actor *first_spawner = actors + 2;
 
 int animation_delay;
+
+struct score{
+	unsigned int value;
+	char dirty;
+} score;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -432,12 +439,48 @@ void reset_actors_and_player() {
 	ply_shot->active = 0;
 }
 
+void set_score(unsigned int value) {
+	score.value = value;
+	score.dirty = 1;
+}
+
+void add_score(unsigned int value) {
+	set_score(score.value + value);
+}
+
+void draw_score() {
+	static char buffer[SCORE_DIGITS];
+	
+	memset(buffer, -1, sizeof buffer);
+	
+	// Calculate the digits
+	char *d = buffer + SCORE_DIGITS - 1;
+	unsigned int remaining = score.value;
+	do {
+		*d = remaining % 10;		
+		remaining = remaining / 10;
+		d--;
+	} while (remaining);
+		
+	d = buffer;
+	SMS_setNextTileatXY(((32 - SCORE_DIGITS) >> 1) + 1, 2);
+	for (char i = SCORE_DIGITS; i; i--, d++) {
+		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
+	}
+}
+
+void draw_score_if_needed() {
+	if (score.dirty) draw_score();
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
 	int torpedo_frame = 0;
 	
 	animation_delay = 0;
+	
+	set_score(0);
 
 	reset_actors_and_player();
 
@@ -475,6 +518,8 @@ char gameplay_loop() {
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+		
+		draw_score_if_needed();
 		
 		frame += 6;
 		if (frame > 12) frame = 0;
