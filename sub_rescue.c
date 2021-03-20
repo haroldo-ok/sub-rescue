@@ -297,7 +297,7 @@ void handle_spawners() {
 	static int y;
 	
 	act = first_spawner;
-	for (i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
+	for (i = 0, y = PLAYER_TOP + 10; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
 		act2 = act + 1;
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
@@ -550,7 +550,7 @@ void handle_oxygen() {
 		level.starting = oxygen.value < OXYGEN_MAX;
 	} else {
 		if (player->y < PLAYER_TOP + 4) {
-			add_oxygen(5);
+			add_oxygen(6);
 		} else {
 			add_oxygen(-1);
 		}
