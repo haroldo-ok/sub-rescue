@@ -170,7 +170,7 @@ void fire_shot(actor *shot, actor *shooter, char speed) {
 	_shot->col_x = 0;
 	_shot->col_y = 8;
 	_shot->col_w = _shot->pixel_w;
-	_shot->col_h = _shot->pixel_h;
+	_shot->col_h = 4;
 	
 	_shot->facing_left = _shooter->facing_left;
 	_shot->spd_x = _shooter->facing_left ? -speed : speed;
