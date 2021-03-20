@@ -26,6 +26,12 @@
 #define GROUP_FISH (3)
 #define GROUP_DIVER (4)
 
+#define SCORE_DIGITS (6)
+
+#define OXYGEN_CHARS (8)
+#define OXYGEN_RESOLUTION (4)
+#define OXYGEN_SHIFT (4)
+#define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
 
 typedef struct actor {
 	char active;
@@ -43,6 +49,8 @@ typedef struct actor {
 	
 	char group;
 	char col_x, col_y, col_w, col_h;
+	
+	unsigned int score;
 } actor;
 
 actor actors[MAX_ACTORS];
@@ -52,6 +60,19 @@ actor *ply_shot = actors + 1;
 actor *first_spawner = actors + 2;
 
 int animation_delay;
+
+struct score {
+	unsigned int value;
+	char dirty;
+} score;
+
+struct oxygen {
+	unsigned int value;
+	unsigned char last_shifted_value;
+	char dirty;
+} oxygen;
+
+void add_score(unsigned int value);
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -103,6 +124,8 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	sa->col_h = sa->pixel_h - 4;
 	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
 	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
+	
+	sa->score = 100;
 }
 
 void clear_actors() {
@@ -283,6 +306,7 @@ void handle_spawners() {
 					act->spd_x = 2;
 					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
+					act->score = 10;
 					break;
 					
 				case 1:
@@ -291,9 +315,11 @@ void handle_spawners() {
 					init_actor(act2, -64, y, 2, 1, 128, 4);
 					act->spd_x = 2;
 					act->group = GROUP_FISH;
+					act->score = 5;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
+					act2->score = act->score;
 					break;
 					
 				case 2:
@@ -301,6 +327,7 @@ void handle_spawners() {
 					init_actor(act, 0, y, 2, 1, 192, 4);
 					act->spd_x = 2;
 					act->group = GROUP_DIVER;
+					act->score = 20;
 					break;
 				}
 				
@@ -397,11 +424,14 @@ void check_collision_against_player_shot() {
 	}
 
 	if (ply_shot->active && is_touching(collider, ply_shot)) {
-		if (collider->group != GROUP_DIVER) collider->active = 0;
+		if (collider->group != GROUP_DIVER) {
+			collider->active = 0;
+			add_score(collider->score);
+		}
 		
 		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
 			ply_shot->active = 0;
-		}
+		}		
 	}
 }
 
@@ -415,6 +445,8 @@ void check_collision_against_player() {
 		if (collider->group != GROUP_DIVER) {
 			player->active = 0;
 		}
+		
+		add_score(collider->score);
 	}
 }
 
@@ -432,12 +464,86 @@ void reset_actors_and_player() {
 	ply_shot->active = 0;
 }
 
+void set_score(unsigned int value) {
+	score.value = value;
+	score.dirty = 1;
+}
+
+void add_score(unsigned int value) {
+	set_score(score.value + value);
+}
+
+void draw_score() {
+	static char buffer[SCORE_DIGITS];
+	
+	memset(buffer, -1, sizeof buffer);
+	
+	// Last digit is always zero
+	char *d = buffer + SCORE_DIGITS - 1;
+	*d = 0;
+	d--;
+	
+	// Calculate the digits
+	unsigned int remaining = score.value;
+	while (remaining) {
+		*d = remaining % 10;		
+		remaining = remaining / 10;
+		d--;
+	}
+		
+	// Draw the digits
+	d = buffer;
+	SMS_setNextTileatXY(((32 - SCORE_DIGITS) >> 1) + 1, 1);
+	for (char i = SCORE_DIGITS; i; i--, d++) {
+		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
+	}
+}
+
+void draw_score_if_needed() {
+	if (score.dirty) draw_score();
+}
+
+void set_oxygen(unsigned int value) {
+	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
+	
+	oxygen.value = value;
+	
+	unsigned char shifted_value = value >> OXYGEN_SHIFT;
+	
+	oxygen.dirty = shifted_value != oxygen.last_shifted_value;
+	oxygen.last_shifted_value = shifted_value;
+}
+
+void draw_oxygen() {
+	SMS_setNextTileatXY(((32 - OXYGEN_CHARS) >> 1) + 1, 2);
+	
+	char remaining = oxygen.last_shifted_value;
+	for (char i = OXYGEN_CHARS; i; i--) {
+		if (remaining > OXYGEN_RESOLUTION) {
+			SMS_setTile(127 + TILE_USE_SPRITE_PALETTE);
+			remaining -= OXYGEN_RESOLUTION;
+			if (remaining < 0) remaining = 0;
+		} else {
+			SMS_setTile(119 + (remaining << 1) + TILE_USE_SPRITE_PALETTE);
+			remaining = 0;
+		}
+	}
+}
+
+void draw_oxygen_if_needed() {
+	if (oxygen.dirty) draw_oxygen();
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
 	int torpedo_frame = 0;
 	
 	animation_delay = 0;
+	
+	set_score(0);
+	set_oxygen(0);
+	oxygen.dirty = 1;
 
 	reset_actors_and_player();
 
@@ -467,6 +573,8 @@ char gameplay_loop() {
 		move_actors();
 		check_collisions();
 		
+		set_oxygen(oxygen.value + 1);
+		
 		SMS_initSprites();	
 
 		draw_actors();
@@ -475,6 +583,9 @@ char gameplay_loop() {
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+		
+		draw_score_if_needed();
+		draw_oxygen_if_needed();
 		
 		frame += 6;
 		if (frame > 12) frame = 0;
