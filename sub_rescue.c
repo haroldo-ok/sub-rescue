@@ -142,7 +142,7 @@ void clear_actors() {
 void fire_shot(actor *shot, actor *shooter, char speed) {	
 	static actor *_shot, *_shooter;
 
-	if (shot->active) return;
+	if (shot->active || level.starting) return;
 	
 	_shot = shot;
 	_shooter = shooter;
@@ -546,7 +546,7 @@ void draw_oxygen_if_needed() {
 
 void handle_oxygen() {
 	if (level.starting) {			
-		add_oxygen(4);
+		add_oxygen(5);
 		level.starting = oxygen.value < OXYGEN_MAX;
 	} else {
 		if (player->y < PLAYER_TOP + 4) {
@@ -592,6 +592,8 @@ char gameplay_loop() {
 	while(1) {		
 		if (!player->active) {
 			reset_actors_and_player();
+			set_oxygen(0);
+			level.starting = 1;
 		}
 	
 		handle_player_input();
