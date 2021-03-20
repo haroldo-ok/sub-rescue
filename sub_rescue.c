@@ -15,7 +15,7 @@
 	
 #define ANIMATION_SPEED (3)
 
-#define PLAYER_SPEED (2)
+#define PLAYER_SPEED (3)
 #define PLAYER_SHOT_SPEED (4)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
@@ -28,10 +28,20 @@
 
 #define SCORE_DIGITS (6)
 
+#define LEVEL_DIGITS (3)
+
 #define OXYGEN_CHARS (8)
 #define OXYGEN_RESOLUTION (4)
 #define OXYGEN_SHIFT (4)
 #define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
+
+#define RESCUE_CHARS (6)
+
+#define LIFE_CHARS (6)
+
+#define STATE_START (1)
+#define STATE_GAMEPLAY (2)
+#define STATE_GAMEOVER (3)
 
 typedef struct actor {
 	char active;
@@ -66,13 +76,30 @@ struct score {
 	char dirty;
 } score;
 
+struct rescue {
+	int value;
+	char dirty;
+} rescue;
+
+struct life {
+	int value;
+	char dirty;
+} life;
+
 struct oxygen {
-	unsigned int value;
+	int value;
 	unsigned char last_shifted_value;
 	char dirty;
 } oxygen;
 
+struct level {
+	unsigned int number;
+	char starting;
+} level;
+
 void add_score(unsigned int value);
+void add_rescue(int value);
+void add_life(int value);
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -125,7 +152,7 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
 	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
 	
-	sa->score = 100;
+	sa->score = 0;
 }
 
 void clear_actors() {
@@ -137,7 +164,7 @@ void clear_actors() {
 void fire_shot(actor *shot, actor *shooter, char speed) {	
 	static actor *_shot, *_shooter;
 
-	if (shot->active) return;
+	if (shot->active || level.starting) return;
 	
 	_shot = shot;
 	_shooter = shooter;
@@ -147,7 +174,7 @@ void fire_shot(actor *shot, actor *shooter, char speed) {
 	_shot->col_x = 0;
 	_shot->col_y = 8;
 	_shot->col_w = _shot->pixel_w;
-	_shot->col_h = _shot->pixel_h;
+	_shot->col_h = 4;
 	
 	_shot->facing_left = _shooter->facing_left;
 	_shot->spd_x = _shooter->facing_left ? -speed : speed;
@@ -292,7 +319,7 @@ void handle_spawners() {
 	static int y;
 	
 	act = first_spawner;
-	for (i = 0, y = PLAYER_TOP + 16; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
+	for (i = 0, y = PLAYER_TOP + 10; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
 		act2 = act + 1;
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
@@ -442,7 +469,9 @@ void check_collision_against_player() {
 
 	if (player->active && is_touching(collider, player)) {
 		collider->active = 0;		
-		if (collider->group != GROUP_DIVER) {
+		if (collider->group == GROUP_DIVER) {
+			add_rescue(1);
+		} else {
 			player->active = 0;
 		}
 		
@@ -503,7 +532,79 @@ void draw_score_if_needed() {
 	if (score.dirty) draw_score();
 }
 
-void set_oxygen(unsigned int value) {
+void draw_level_number() {
+	static char buffer[LEVEL_DIGITS];
+	
+	memset(buffer, -1, sizeof buffer);
+	
+	// Calculate the digits
+	char *d = buffer + LEVEL_DIGITS - 1;
+	unsigned int remaining = level.number;
+	do {
+		*d = remaining % 10;		
+		remaining = remaining / 10;
+		d--;
+	} while (remaining);
+		
+	// Draw the digits
+	d = buffer;
+	SMS_setNextTileatXY(2, 1);
+	for (char i = LEVEL_DIGITS; i; i--, d++) {
+		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
+	}
+}
+
+void set_rescue(int value) {
+	if (value < 0) value = 0;
+	if (value > RESCUE_CHARS) value = RESCUE_CHARS;
+	rescue.value = value;
+	rescue.dirty = 1;	
+}
+
+void add_rescue(int value) {
+	set_rescue(rescue.value + value);	
+}
+
+void draw_rescue() {
+	SMS_setNextTileatXY(32 - RESCUE_CHARS - 2, 2);
+	
+	int remaining = rescue.value;
+	for (char i = RESCUE_CHARS; i; i--) {
+		SMS_setTile((remaining > 0 ? 63 : 62) + TILE_USE_SPRITE_PALETTE);
+		remaining --;
+	}
+}
+
+void draw_rescue_if_needed() {
+	if (rescue.dirty) draw_rescue();
+}
+
+void set_life(int value) {
+	if (value < 0) value = 0;
+	life.value = value;
+	life.dirty = 1;	
+}
+
+void add_life(int value) {
+	set_life(life.value + value);	
+}
+
+void draw_life() {
+	SMS_setNextTileatXY(2, 2);
+	
+	int remaining = life.value;
+	for (char i = LIFE_CHARS; i; i--) {
+		SMS_setTile((remaining > 0 ? 61 : 60) + TILE_USE_SPRITE_PALETTE);
+		remaining --;
+	}
+}
+
+void draw_life_if_needed() {
+	if (rescue.dirty) draw_life();
+}
+
+void set_oxygen(int value) {
+	if (value < 0) value = 0;
 	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
 	
 	oxygen.value = value;
@@ -514,10 +615,14 @@ void set_oxygen(unsigned int value) {
 	oxygen.last_shifted_value = shifted_value;
 }
 
+void add_oxygen(unsigned int value) {
+	set_oxygen(oxygen.value + value);
+}
+
 void draw_oxygen() {
 	SMS_setNextTileatXY(((32 - OXYGEN_CHARS) >> 1) + 1, 2);
 	
-	char remaining = oxygen.last_shifted_value;
+	int remaining = oxygen.last_shifted_value;
 	for (char i = OXYGEN_CHARS; i; i--) {
 		if (remaining > OXYGEN_RESOLUTION) {
 			SMS_setTile(127 + TILE_USE_SPRITE_PALETTE);
@@ -534,6 +639,29 @@ void draw_oxygen_if_needed() {
 	if (oxygen.dirty) draw_oxygen();
 }
 
+void handle_oxygen() {
+	if (level.starting) {			
+		add_oxygen(5);
+		level.starting = oxygen.value < OXYGEN_MAX;
+	} else {
+		if (player->y < PLAYER_TOP + 4) {
+			add_oxygen(6);
+		} else {
+			add_oxygen(-1);
+			if (!oxygen.value) player->active = 0;
+		}
+	}
+}
+
+void initialize_level() {
+	level.starting = 1;
+	
+	clear_actors();
+	ply_shot->active = 0;
+	set_oxygen(0);
+	set_rescue(0);
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -542,8 +670,13 @@ char gameplay_loop() {
 	animation_delay = 0;
 	
 	set_score(0);
-	set_oxygen(0);
+	set_rescue(0);
+	set_life(4);
+	set_oxygen(0);	
 	oxygen.dirty = 1;
+	
+	level.number = 1;
+	level.starting = 1;
 
 	reset_actors_and_player();
 
@@ -563,17 +696,33 @@ char gameplay_loop() {
 	
 	SMS_displayOn();
 	
-	while(1) {		
+	initialize_level();
+	
+	while(1) {	
+		if (rescue.value == RESCUE_CHARS && player->y < PLAYER_TOP + 4) {
+			level.number++;
+			initialize_level();
+		}
+
 		if (!player->active) {
+			add_life(-1);
 			reset_actors_and_player();
+			set_oxygen(0);
+			level.starting = 1;
+		}
+		
+		if (!life.value) {
+			return STATE_GAMEOVER;
 		}
 	
 		handle_player_input();
-		handle_spawners();
-		move_actors();
-		check_collisions();
+		handle_oxygen();
 		
-		set_oxygen(oxygen.value + 1);
+		if (!level.starting) {			
+			handle_spawners();
+			move_actors();
+			check_collisions();
+		}
 		
 		SMS_initSprites();	
 
@@ -584,7 +733,10 @@ char gameplay_loop() {
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 		
+		draw_level_number();
 		draw_score_if_needed();
+		draw_rescue_if_needed();
+		draw_life_if_needed();
 		draw_oxygen_if_needed();
 		
 		frame += 6;
@@ -601,17 +753,36 @@ char gameplay_loop() {
 	}
 }
 
+char handle_gameover() {
+	return STATE_START;
+}
+
 void main() {
+	char state = STATE_START;
+	
 	SMS_useFirstHalfTilesforSprites(1);
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 	
-	while (1) {			
-		gameplay_loop();
+	while (1) {
+		switch (state) {
+			
+		case STATE_START:
+			state = STATE_GAMEPLAY;
+			break;
+			
+		case STATE_GAMEPLAY:
+			state = gameplay_loop();
+			break;
+			
+		case STATE_GAMEOVER:
+			state = handle_gameover();
+			break;
+		}
 	}
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,1, 2021,3,15, "Haroldo-OK\\2021", "Sub Rescue",
+SMS_EMBED_SDSC_HEADER(0,2, 2021,3,20, "Haroldo-OK\\2021", "Sub Rescue",
   "A subaquatic shoot-em-up.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
