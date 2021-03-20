@@ -15,7 +15,7 @@
 	
 #define ANIMATION_SPEED (3)
 
-#define PLAYER_SPEED (2)
+#define PLAYER_SPEED (3)
 #define PLAYER_SHOT_SPEED (4)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
@@ -125,7 +125,7 @@ void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char 
 	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
 	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
 	
-	sa->score = 100;
+	sa->score = 0;
 }
 
 void clear_actors() {
