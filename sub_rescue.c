@@ -649,6 +649,15 @@ void handle_oxygen() {
 	}
 }
 
+void initialize_level() {
+	level.starting = 1;
+	
+	clear_actors();
+	ply_shot->active = 0;
+	set_oxygen(0);
+	set_rescue(0);
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -683,7 +692,14 @@ char gameplay_loop() {
 	
 	SMS_displayOn();
 	
+	initialize_level();
+	
 	while(1) {		
+		if (rescue.value == RESCUE_CHARS && player->y < PLAYER_TOP + 4) {
+			level.number++;
+			initialize_level();
+		}
+
 		if (!player->active) {
 			add_life(-1);
 			reset_actors_and_player();
@@ -697,7 +713,7 @@ char gameplay_loop() {
 		if (!level.starting) {			
 			handle_spawners();
 			move_actors();
-			check_collisions();			
+			check_collisions();
 		}
 		
 		SMS_initSprites();	
