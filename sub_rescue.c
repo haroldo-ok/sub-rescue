@@ -907,6 +907,22 @@ char gameplay_loop() {
 	}
 }
 
+void print_number(char x, char y, unsigned int number, char extra_zero) {
+	unsigned int base = 352 - 32;
+	unsigned int remaining = number;
+	
+	if (extra_zero) {
+		SMS_setNextTileatXY(x--, y);	
+		SMS_setTile(base + '0');
+	}
+	
+	while (remaining) {
+		SMS_setNextTileatXY(x--, y);
+		SMS_setTile(base + '0' + remaining % 10);
+		remaining /= 10;
+	}
+}
+
 char handle_gameover() {
 	SMS_displayOff();
 	
@@ -935,18 +951,13 @@ char handle_gameover() {
 	
 	SMS_setNextTileatXY(11, 13);
 	for (ch = "Your score:"; *ch; ch++) SMS_setTile(base + *ch);
+	print_number(16, 14, score.value, 1);
 	
-	// Print score
-	unsigned int remaining = score.value;
-	int x = 16;
-	SMS_setNextTileatXY(x--, 14);	
-	SMS_setTile(base + '0'); // The last digit is always zero.
-	while (remaining) {
-		SMS_setNextTileatXY(x--, 14);	
-		SMS_setTile(base + '0' + remaining % 10);
-		remaining /= 10;
-	}
 	
+	SMS_setNextTileatXY(11, 16);
+	for (ch = "Your level:"; *ch; ch++) SMS_setTile(base + *ch);
+	print_number(16, 17, level.number, 0);
+
 	SMS_displayOn();	
 	
 	wait_frames(180);
