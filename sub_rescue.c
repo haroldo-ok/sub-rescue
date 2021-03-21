@@ -106,6 +106,7 @@ struct level {
 	unsigned char diver_speed;
 	
 	unsigned int diver_chance;
+	int boost_chance;
 	char enemy_can_fire;
 } level;
 
@@ -335,7 +336,7 @@ void adjust_facing(actor *act, char facing_left) {
 
 void handle_spawners() {
 	static actor *act, *act2;
-	static char i, facing_left, thing_to_spawn;
+	static char i, facing_left, thing_to_spawn, boost;
 	static int y;
 	
 	act = first_spawner;
@@ -344,13 +345,14 @@ void handle_spawners() {
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
 				facing_left = (rand() >> 4) & 1;
-				thing_to_spawn = ((rand() >> 4) % level.diver_chance) ? ((rand() >> 4) & 1) : 2;
+				thing_to_spawn = (rand() >> 4) % level.diver_chance ? ((rand() >> 4) & 1) : 2;
+				boost = (rand() >> 4) % level.boost_chance ? 1 : 0;
 				
 				switch (thing_to_spawn) {
 				case 0:
 					// Spawn a submarine
 					init_actor(act, 0, y, 3, 1, 66, 3);
-					act->spd_x = level.submarine_speed;
+					act->spd_x = level.submarine_speed + boost;
 					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
 					act->score = level.submarine_score;
@@ -360,7 +362,7 @@ void handle_spawners() {
 					// Spawn a pair of fishes
 					init_actor(act, 0, y, 2, 1, 128, 4);
 					init_actor(act2, -64, y, 2, 1, 128, 4);
-					act->spd_x = level.fish_speed;
+					act->spd_x = level.fish_speed + boost;
 					act->group = GROUP_FISH;
 					act->score = level.fish_score;
 
@@ -372,7 +374,7 @@ void handle_spawners() {
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
-					act->spd_x = level.diver_speed;
+					act->spd_x = level.diver_speed + boost;
 					act->group = GROUP_DIVER;
 					act->score = level.diver_score;
 					break;
@@ -705,6 +707,9 @@ void initialize_level() {
 	
 	level.diver_chance = 4 + level.number * 3 / 4;	
 	level.enemy_can_fire = level.number > 1;
+	
+	level.boost_chance = 10 - level.number * 2 / 3;
+	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
 void flash_player_red(unsigned char delay) {
