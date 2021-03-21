@@ -347,7 +347,7 @@ void handle_spawners() {
 			if (rand() & 3 > 1) {
 				facing_left = (rand() >> 4) & 1;
 				thing_to_spawn = (rand() >> 4) % level.diver_chance ? ((rand() >> 4) & 1) : 2;
-				boost = (rand() >> 4) % level.boost_chance ? 1 : 0;
+				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
 				
 				switch (thing_to_spawn) {
 				case 0:
