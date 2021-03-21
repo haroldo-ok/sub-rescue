@@ -675,6 +675,8 @@ void flash_player_red(unsigned char delay) {
 	counter = delay;
 	
 	SMS_loadSpritePalette(sprites_palette_bin);
+	SMS_setSpritePaletteColor(0, 0);
+	
 	flag = !flag;
 	if (flag) {
 		SMS_setSpritePaletteColor(5, 0x1B);
@@ -689,6 +691,8 @@ void perform_death_sequence() {
 		SMS_waitForVBlank();
 		flash_player_red(8);
 	}
+	
+	load_standard_palettes();
 }
 
 char gameplay_loop() {
