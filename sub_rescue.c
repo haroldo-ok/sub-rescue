@@ -106,6 +106,7 @@ struct level {
 	unsigned char diver_speed;
 	
 	unsigned int diver_chance;
+	char enemy_can_fire;
 } level;
 
 void add_score(unsigned int value);
@@ -215,7 +216,7 @@ void move_actor(actor *act) {
 		}				
 	}
 	
-	if (_act->autofire) {
+	if (_act->autofire && level.enemy_can_fire) {
 		actor *_shot = _act + 1;		
 		fire_shot(_shot, _act, abs(_act->spd_x) + 1);
 		_shot->group = GROUP_ENEMY_SHOT;
@@ -702,7 +703,8 @@ void initialize_level() {
 	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
 	if (level.diver_speed > PLAYER_SPEED) level.diver_speed = PLAYER_SPEED;
 	
-	level.diver_chance = 4 + level.number * 3 / 4;
+	level.diver_chance = 4 + level.number * 3 / 4;	
+	level.enemy_can_fire = level.number > 1;
 }
 
 void flash_player_red(unsigned char delay) {
