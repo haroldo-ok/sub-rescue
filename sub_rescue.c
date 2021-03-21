@@ -95,6 +95,11 @@ struct oxygen {
 struct level {
 	unsigned int number;
 	char starting;
+
+	unsigned int submarine_score;
+	unsigned int fish_score;
+	unsigned int diver_score;
+	unsigned int oxygen_score;
 } level;
 
 void add_score(unsigned int value);
@@ -337,7 +342,7 @@ void handle_spawners() {
 					act->spd_x = 2;
 					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
-					act->score = 10;
+					act->score = level.submarine_score;
 					break;
 					
 				case 1:
@@ -346,7 +351,7 @@ void handle_spawners() {
 					init_actor(act2, -64, y, 2, 1, 128, 4);
 					act->spd_x = 2;
 					act->group = GROUP_FISH;
-					act->score = 5;
+					act->score = level.fish_score;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
@@ -358,7 +363,7 @@ void handle_spawners() {
 					init_actor(act, 0, y, 2, 1, 192, 4);
 					act->spd_x = 2;
 					act->group = GROUP_DIVER;
-					act->score = 20;
+					act->score = level.diver_score;
 					break;
 				}
 				
@@ -673,6 +678,11 @@ void initialize_level() {
 	ply_shot->active = 0;
 	set_oxygen(0);
 	set_rescue(0);
+	
+	level.fish_score = 1 + level.number / 3;
+	level.submarine_score = level.fish_score << 1;
+	level.diver_score = level.fish_score + level.submarine_score;
+	level.oxygen_score = 1 + level.number / 4;
 }
 
 void flash_player_red(unsigned char delay) {
@@ -712,10 +722,10 @@ void perform_level_end_sequence() {
 	load_standard_palettes();
 	while (oxygen.value || rescue.value) {
 		if (oxygen.value) {
-			add_score(1);
+			add_score(level.oxygen_score);
 			add_oxygen(-4);
 		} else if (rescue.value) {
-			add_score(10);
+			add_score(level.diver_score << 1);
 			add_rescue(-1);
 
 			wait_frames(20);
