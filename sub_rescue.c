@@ -306,6 +306,10 @@ void handle_player_input() {
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
 		fire_shot(ply_shot, player, PLAYER_SHOT_SPEED);
+		
+		// Player's shot has a slightly larger collision box
+		ply_shot->col_y = 7;
+		ply_shot->col_h = 6;
 	}
 }
 
