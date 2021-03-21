@@ -161,6 +161,10 @@ void clear_actors() {
 	}
 }
 
+void wait_frames(int wait_time) {
+	for (; wait_time; wait_time--) SMS_waitForVBlank();
+}
+
 void fire_shot(actor *shot, actor *shooter, char speed) {	
 	static actor *_shot, *_shooter;
 
@@ -566,9 +570,18 @@ void add_rescue(int value) {
 }
 
 void draw_rescue() {
+	static char blink_control;
+	
 	SMS_setNextTileatXY(32 - RESCUE_CHARS - 2, 2);
 	
 	int remaining = rescue.value;
+	
+	// Blink if all divers rescued.
+	if (rescue.value == RESCUE_CHARS) {
+		if (blink_control & 0x10) remaining = 0;
+		blink_control++;
+	}
+	
 	for (char i = RESCUE_CHARS; i; i--) {
 		SMS_setTile((remaining > 0 ? 63 : 62) + TILE_USE_SPRITE_PALETTE);
 		remaining --;
@@ -662,6 +675,60 @@ void initialize_level() {
 	set_rescue(0);
 }
 
+void flash_player_red(unsigned char delay) {
+	static unsigned char counter;
+	static unsigned char flag;
+	
+	if (counter > delay) counter = delay;
+	if (counter) {
+		counter--;
+		return;
+	}
+	
+	counter = delay;
+	
+	SMS_loadSpritePalette(sprites_palette_bin);
+	SMS_setSpritePaletteColor(0, 0);
+	
+	flag = !flag;
+	if (flag) {
+		SMS_setSpritePaletteColor(5, 0x1B);
+		SMS_setSpritePaletteColor(6, 0x06);
+		SMS_setSpritePaletteColor(7, 0x01);
+	}
+	
+}
+
+void perform_death_sequence() {
+	for (unsigned char i = 70; i; i--) {
+		SMS_waitForVBlank();
+		flash_player_red(8);
+	}
+	
+	load_standard_palettes();
+}
+
+void perform_level_end_sequence() {
+	load_standard_palettes();
+	while (oxygen.value || rescue.value) {
+		if (oxygen.value) {
+			add_score(1);
+			add_oxygen(-4);
+		} else if (rescue.value) {
+			add_score(10);
+			add_rescue(-1);
+
+			wait_frames(20);
+		}
+		
+		SMS_waitForVBlank();
+		
+		draw_score_if_needed();
+		draw_rescue_if_needed();
+		draw_oxygen_if_needed();
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -692,16 +759,16 @@ char gameplay_loop() {
 
 	clear_sprites();
 
-	//configure_text();
-	
 	SMS_displayOn();
 	
 	initialize_level();
 	
 	while(1) {	
 		if (rescue.value == RESCUE_CHARS && player->y < PLAYER_TOP + 4) {
+			perform_level_end_sequence();
 			level.number++;
 			initialize_level();
+			player->active = 1;
 		}
 
 		if (!player->active) {
@@ -724,6 +791,10 @@ char gameplay_loop() {
 			check_collisions();
 		}
 		
+		if (!player->active) {
+			perform_death_sequence();
+		}
+		
 		SMS_initSprites();	
 
 		draw_actors();
@@ -732,13 +803,19 @@ char gameplay_loop() {
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+
+		if (!level.starting && oxygen.value < OXYGEN_MAX >> 2) {
+			flash_player_red(16);
+		} else {
+			load_standard_palettes();
+		}
 		
 		draw_level_number();
 		draw_score_if_needed();
 		draw_rescue_if_needed();
 		draw_life_if_needed();
 		draw_oxygen_if_needed();
-		
+				
 		frame += 6;
 		if (frame > 12) frame = 0;
 		
@@ -754,6 +831,49 @@ char gameplay_loop() {
 }
 
 char handle_gameover() {
+	SMS_displayOff();
+	
+	load_standard_palettes();
+	clear_sprites();
+	
+	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 0);
+	SMS_loadTileMap(0, 0,background_tilemap_bin, background_tilemap_bin_size);		
+	configure_text();	
+	
+	/*
+	SMS_configureTextRenderer(352 - 32);
+	SMS_setNextTileatXY(11, 11);
+	puts('Game Over!');
+	SMS_setNextTileatXY(11, 13);
+//	printf('Score: %d0', score.value);
+	*/
+
+	// For some reason, the default text renderer is not working.
+	// TODO: Organize this mess
+	char *ch;
+	unsigned int base = 352 - 32;
+	
+	SMS_setNextTileatXY(11, 11);
+	for (ch = "Game Over!"; *ch; ch++) SMS_setTile(base + *ch);
+	
+	SMS_setNextTileatXY(11, 13);
+	for (ch = "Your score:"; *ch; ch++) SMS_setTile(base + *ch);
+	
+	// Print score
+	unsigned int remaining = score.value;
+	int x = 16;
+	SMS_setNextTileatXY(x--, 14);	
+	SMS_setTile(base + '0'); // The last digit is always zero.
+	while (remaining) {
+		SMS_setNextTileatXY(x--, 14);	
+		SMS_setTile(base + '0' + remaining % 10);
+		remaining /= 10;
+	}
+	
+	SMS_displayOn();	
+	
+	wait_frames(180);
+	
 	return STATE_START;
 }
 
