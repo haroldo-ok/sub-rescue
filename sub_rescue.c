@@ -35,7 +35,9 @@
 #define OXYGEN_SHIFT (4)
 #define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
 
-#define RESCUE_CHARS (6)
+//#define RESCUE_CHARS (6)
+// TODO: Reduced to simplify testing
+#define RESCUE_CHARS (2)
 
 #define LIFE_CHARS (6)
 
@@ -695,6 +697,27 @@ void perform_death_sequence() {
 	load_standard_palettes();
 }
 
+void perform_level_end_sequence() {
+	load_standard_palettes();
+	while (oxygen.value || rescue.value) {
+		if (oxygen.value) {
+			add_score(1);
+			add_oxygen(-4);
+		} else if (rescue.value) {
+			add_score(10);
+			add_rescue(-1);
+			
+			for (char i = 20; i; i--) SMS_waitForVBlank();
+		}
+		
+		SMS_waitForVBlank();
+		
+		draw_score_if_needed();
+		draw_rescue_if_needed();
+		draw_oxygen_if_needed();
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -733,6 +756,7 @@ char gameplay_loop() {
 	
 	while(1) {	
 		if (rescue.value == RESCUE_CHARS && player->y < PLAYER_TOP + 4) {
+			perform_level_end_sequence();
 			level.number++;
 			initialize_level();
 		}
