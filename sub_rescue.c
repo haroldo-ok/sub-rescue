@@ -109,6 +109,7 @@ struct level {
 	unsigned int diver_chance;
 	int boost_chance;
 	char enemy_can_fire;
+	char show_diver_indicator;
 } level;
 
 void add_score(unsigned int value);
@@ -375,9 +376,15 @@ void handle_spawners() {
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
+					init_actor(act2, -24, y, 2, 1, 160, 2);
+					
 					act->spd_x = level.diver_speed + boost;
 					act->group = GROUP_DIVER;
 					act->score = level.diver_score;
+					
+					act2->active = level.show_diver_indicator;
+					act2->spd_x = act->spd_x;
+					act2->group = 0;
 					break;
 				}
 				
@@ -494,6 +501,8 @@ void check_collision_against_player() {
 		collider->active = 0;		
 		if (collider->group == GROUP_DIVER) {
 			add_rescue(1);
+			// Hide the "Get ->" indicator.
+			(collider + 1)->active = 0;
 		} else {
 			player->active = 0;
 		}
@@ -716,6 +725,7 @@ void initialize_level() {
 	
 	level.diver_chance = 4 + level.number * 3 / 4;	
 	level.enemy_can_fire = level.number > 1;
+	level.show_diver_indicator = level.number < 2;
 	
 	level.boost_chance = 10 - level.number * 2 / 3;
 	if (level.boost_chance < 2) level.boost_chance = 2;
