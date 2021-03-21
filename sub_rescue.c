@@ -109,6 +109,7 @@ struct level {
 	unsigned int diver_chance;
 	int boost_chance;
 	char enemy_can_fire;
+	char show_diver_indicator;
 } level;
 
 void add_score(unsigned int value);
@@ -375,9 +376,15 @@ void handle_spawners() {
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
+					init_actor(act2, -24, y, 2, 1, 160, 2);
+					
 					act->spd_x = level.diver_speed + boost;
 					act->group = GROUP_DIVER;
 					act->score = level.diver_score;
+					
+					act2->active = level.show_diver_indicator;
+					act2->spd_x = act->spd_x;
+					act2->group = 0;
 					break;
 				}
 				
@@ -494,6 +501,8 @@ void check_collision_against_player() {
 		collider->active = 0;		
 		if (collider->group == GROUP_DIVER) {
 			add_rescue(1);
+			// Hide the "Get ->" indicator.
+			(collider + 1)->active = 0;
 		} else {
 			player->active = 0;
 		}
@@ -679,6 +688,10 @@ void draw_oxygen_if_needed() {
 	if (oxygen.dirty) draw_oxygen();
 }
 
+char is_oxygen_critical() {
+	return !level.starting && oxygen.value < OXYGEN_MAX >> 2;
+}
+
 void handle_oxygen() {
 	if (level.starting) {			
 		add_oxygen(5);
@@ -716,6 +729,7 @@ void initialize_level() {
 	
 	level.diver_chance = 4 + level.number * 3 / 4;	
 	level.enemy_can_fire = level.number > 1;
+	level.show_diver_indicator = level.number < 2;
 	
 	level.boost_chance = 10 - level.number * 2 / 3;
 	if (level.boost_chance < 2) level.boost_chance = 2;
@@ -773,6 +787,22 @@ void perform_level_end_sequence() {
 		draw_rescue_if_needed();
 		draw_oxygen_if_needed();
 	}
+}
+
+void draw_go_up_icon() {
+	static char frame;
+	static char tile;
+	
+	// Only show the icons if oxygen is critical, or if all divers are rescued.
+	if (rescue.value != RESCUE_CHARS && !is_oxygen_critical()) return;
+		
+	if (!animation_delay) frame += 4;
+	if (frame > 4) frame = 0;
+	
+	tile = 224 + frame;
+	draw_meta_sprite(48, 24, 2, 1, tile);
+	draw_meta_sprite(124, 24, 2, 1, tile);
+	draw_meta_sprite(SCREEN_W - 48 - 8, 24, 2, 1, tile);
 }
 
 char gameplay_loop() {
@@ -843,14 +873,15 @@ char gameplay_loop() {
 		
 		SMS_initSprites();	
 
-		draw_actors();
+		draw_actors();		
+		draw_go_up_icon();
 
 		SMS_finalizeSprites();		
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 
-		if (!level.starting && oxygen.value < OXYGEN_MAX >> 2) {
+		if (is_oxygen_critical()) {
 			flash_player_red(16);
 		} else {
 			load_standard_palettes();
@@ -873,6 +904,22 @@ char gameplay_loop() {
 		
 		animation_delay--;
 		if (animation_delay < 0) animation_delay = ANIMATION_SPEED;
+	}
+}
+
+void print_number(char x, char y, unsigned int number, char extra_zero) {
+	unsigned int base = 352 - 32;
+	unsigned int remaining = number;
+	
+	if (extra_zero) {
+		SMS_setNextTileatXY(x--, y);	
+		SMS_setTile(base + '0');
+	}
+	
+	while (remaining) {
+		SMS_setNextTileatXY(x--, y);
+		SMS_setTile(base + '0' + remaining % 10);
+		remaining /= 10;
 	}
 }
 
@@ -904,18 +951,13 @@ char handle_gameover() {
 	
 	SMS_setNextTileatXY(11, 13);
 	for (ch = "Your score:"; *ch; ch++) SMS_setTile(base + *ch);
+	print_number(16, 14, score.value, 1);
 	
-	// Print score
-	unsigned int remaining = score.value;
-	int x = 16;
-	SMS_setNextTileatXY(x--, 14);	
-	SMS_setTile(base + '0'); // The last digit is always zero.
-	while (remaining) {
-		SMS_setNextTileatXY(x--, 14);	
-		SMS_setTile(base + '0' + remaining % 10);
-		remaining /= 10;
-	}
 	
+	SMS_setNextTileatXY(11, 16);
+	for (ch = "Your level:"; *ch; ch++) SMS_setTile(base + *ch);
+	print_number(16, 17, level.number, 0);
+
 	SMS_displayOn();	
 	
 	wait_frames(180);
