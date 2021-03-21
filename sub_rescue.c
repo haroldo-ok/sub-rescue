@@ -100,6 +100,10 @@ struct level {
 	unsigned int fish_score;
 	unsigned int diver_score;
 	unsigned int oxygen_score;
+	
+	unsigned char submarine_speed;
+	unsigned char fish_speed;
+	unsigned char diver_speed;
 } level;
 
 void add_score(unsigned int value);
@@ -343,7 +347,7 @@ void handle_spawners() {
 				case 0:
 					// Spawn a submarine
 					init_actor(act, 0, y, 3, 1, 66, 3);
-					act->spd_x = 2;
+					act->spd_x = level.submarine_speed;
 					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
 					act->score = level.submarine_score;
@@ -353,7 +357,7 @@ void handle_spawners() {
 					// Spawn a pair of fishes
 					init_actor(act, 0, y, 2, 1, 128, 4);
 					init_actor(act2, -64, y, 2, 1, 128, 4);
-					act->spd_x = 2;
+					act->spd_x = level.fish_speed;
 					act->group = GROUP_FISH;
 					act->score = level.fish_score;
 
@@ -365,7 +369,7 @@ void handle_spawners() {
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
-					act->spd_x = 2;
+					act->spd_x = level.diver_speed;
 					act->group = GROUP_DIVER;
 					act->score = level.diver_score;
 					break;
@@ -687,6 +691,14 @@ void initialize_level() {
 	level.submarine_score = level.fish_score << 1;
 	level.diver_score = level.fish_score + level.submarine_score;
 	level.oxygen_score = 1 + level.number / 4;
+	
+	level.fish_speed = 1 + level.number / 3;
+	level.submarine_speed = 1 + level.number / 4;
+	level.diver_speed = 1 + level.number / 5;
+	
+	if (level.fish_speed > PLAYER_SPEED) level.fish_speed = PLAYER_SPEED;
+	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
+	if (level.diver_speed > PLAYER_SPEED) level.diver_speed = PLAYER_SPEED;
 }
 
 void flash_player_red(unsigned char delay) {
@@ -917,6 +929,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2021,3,20, "Haroldo-OK\\2021", "Sub Rescue",
+SMS_EMBED_SDSC_HEADER(0,2, 2021,3,21, "Haroldo-OK\\2021", "Sub Rescue",
   "A subaquatic shoot-em-up.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
