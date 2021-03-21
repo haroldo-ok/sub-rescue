@@ -104,6 +104,8 @@ struct level {
 	unsigned char submarine_speed;
 	unsigned char fish_speed;
 	unsigned char diver_speed;
+	
+	unsigned int diver_chance;
 } level;
 
 void add_score(unsigned int value);
@@ -341,7 +343,7 @@ void handle_spawners() {
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
 				facing_left = (rand() >> 4) & 1;
-				thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
+				thing_to_spawn = ((rand() >> 4) % level.diver_chance) ? ((rand() >> 4) & 1) : 2;
 				
 				switch (thing_to_spawn) {
 				case 0:
@@ -699,6 +701,8 @@ void initialize_level() {
 	if (level.fish_speed > PLAYER_SPEED) level.fish_speed = PLAYER_SPEED;
 	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
 	if (level.diver_speed > PLAYER_SPEED) level.diver_speed = PLAYER_SPEED;
+	
+	level.diver_chance = 4 + level.number * 3 / 4;
 }
 
 void flash_player_red(unsigned char delay) {
