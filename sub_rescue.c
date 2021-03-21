@@ -35,9 +35,7 @@
 #define OXYGEN_SHIFT (4)
 #define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
 
-//#define RESCUE_CHARS (6)
-// TODO: Reduced to simplify testing
-#define RESCUE_CHARS (2)
+#define RESCUE_CHARS (6)
 
 #define LIFE_CHARS (6)
 
@@ -161,6 +159,10 @@ void clear_actors() {
 	FOREACH_ACTOR(act) {
 		act->active = 0;
 	}
+}
+
+void wait_frames(int wait_time) {
+	for (; wait_time; wait_time--) SMS_waitForVBlank();
 }
 
 void fire_shot(actor *shot, actor *shooter, char speed) {	
@@ -715,8 +717,8 @@ void perform_level_end_sequence() {
 		} else if (rescue.value) {
 			add_score(10);
 			add_rescue(-1);
-			
-			for (char i = 20; i; i--) SMS_waitForVBlank();
+
+			wait_frames(20);
 		}
 		
 		SMS_waitForVBlank();
@@ -757,8 +759,6 @@ char gameplay_loop() {
 
 	clear_sprites();
 
-	//configure_text();
-	
 	SMS_displayOn();
 	
 	initialize_level();
@@ -830,6 +830,49 @@ char gameplay_loop() {
 }
 
 char handle_gameover() {
+	SMS_displayOff();
+	
+	load_standard_palettes();
+	clear_sprites();
+	
+	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 0);
+	SMS_loadTileMap(0, 0,background_tilemap_bin, background_tilemap_bin_size);		
+	configure_text();	
+	
+	/*
+	SMS_configureTextRenderer(352 - 32);
+	SMS_setNextTileatXY(11, 11);
+	puts('Game Over!');
+	SMS_setNextTileatXY(11, 13);
+//	printf('Score: %d0', score.value);
+	*/
+
+	// For some reason, the default text renderer is not working.
+	// TODO: Organize this mess
+	char *ch;
+	unsigned int base = 352 - 32;
+	
+	SMS_setNextTileatXY(11, 11);
+	for (ch = "Game Over!"; *ch; ch++) SMS_setTile(base + *ch);
+	
+	SMS_setNextTileatXY(11, 13);
+	for (ch = "Your score:"; *ch; ch++) SMS_setTile(base + *ch);
+	
+	// Print score
+	unsigned int remaining = score.value;
+	int x = 16;
+	SMS_setNextTileatXY(x--, 14);	
+	SMS_setTile(base + '0'); // The last digit is always zero.
+	while (remaining) {
+		SMS_setNextTileatXY(x--, 14);	
+		SMS_setTile(base + '0' + remaining % 10);
+		remaining /= 10;
+	}
+	
+	SMS_displayOn();	
+	
+	wait_frames(180);
+	
 	return STATE_START;
 }
 
