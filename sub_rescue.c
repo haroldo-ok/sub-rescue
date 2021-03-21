@@ -662,6 +662,35 @@ void initialize_level() {
 	set_rescue(0);
 }
 
+void flash_player_red(unsigned char delay) {
+	static unsigned char counter;
+	static unsigned char flag;
+	
+	if (counter > delay) counter = delay;
+	if (counter) {
+		counter--;
+		return;
+	}
+	
+	counter = delay;
+	
+	SMS_loadSpritePalette(sprites_palette_bin);
+	flag = !flag;
+	if (flag) {
+		SMS_setSpritePaletteColor(5, 0x1B);
+		SMS_setSpritePaletteColor(6, 0x06);
+		SMS_setSpritePaletteColor(7, 0x01);
+	}
+	
+}
+
+void perform_death_sequence() {
+	for (unsigned char i = 70; i; i--) {
+		SMS_waitForVBlank();
+		flash_player_red(8);
+	}
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -722,6 +751,10 @@ char gameplay_loop() {
 			handle_spawners();
 			move_actors();
 			check_collisions();
+		}
+		
+		if (!player->active) {
+			perform_death_sequence();
 		}
 		
 		SMS_initSprites();	
