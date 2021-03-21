@@ -688,6 +688,10 @@ void draw_oxygen_if_needed() {
 	if (oxygen.dirty) draw_oxygen();
 }
 
+char is_oxygen_critical() {
+	return !level.starting && oxygen.value < OXYGEN_MAX >> 2;
+}
+
 void handle_oxygen() {
 	if (level.starting) {			
 		add_oxygen(5);
@@ -785,6 +789,22 @@ void perform_level_end_sequence() {
 	}
 }
 
+void draw_go_up_icon() {
+	static char frame;
+	static char tile;
+	
+	// Only show the icons if oxygen is critical, or if all divers are rescued.
+	if (rescue.value != RESCUE_CHARS && !is_oxygen_critical()) return;
+		
+	if (!animation_delay) frame += 4;
+	if (frame > 4) frame = 0;
+	
+	tile = 224 + frame;
+	draw_meta_sprite(48, 24, 2, 1, tile);
+	draw_meta_sprite(124, 24, 2, 1, tile);
+	draw_meta_sprite(SCREEN_W - 48 - 8, 24, 2, 1, tile);
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -853,14 +873,15 @@ char gameplay_loop() {
 		
 		SMS_initSprites();	
 
-		draw_actors();
+		draw_actors();		
+		draw_go_up_icon();
 
 		SMS_finalizeSprites();		
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 
-		if (!level.starting && oxygen.value < OXYGEN_MAX >> 2) {
+		if (is_oxygen_critical()) {
 			flash_player_red(16);
 		} else {
 			load_standard_palettes();
