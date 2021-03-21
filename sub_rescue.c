@@ -647,11 +647,11 @@ void set_oxygen(int value) {
 	oxygen.last_shifted_value = shifted_value;
 }
 
-void add_oxygen(unsigned int value) {
+void add_oxygen(int value) {
 	set_oxygen(oxygen.value + value);
 }
 
-void add_oxygen_non_negative(unsigned int value) {
+void add_oxygen_non_negative(int value) {
 	value = oxygen.value + value;
 	if (value < 0) value = 0;
 	set_oxygen(value);
