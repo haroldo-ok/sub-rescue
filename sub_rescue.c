@@ -769,13 +769,19 @@ char gameplay_loop() {
 
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
+
+		if (!level.starting && oxygen.value < OXYGEN_MAX >> 2) {
+			flash_player_red(16);
+		} else {
+			load_standard_palettes();
+		}
 		
 		draw_level_number();
 		draw_score_if_needed();
 		draw_rescue_if_needed();
 		draw_life_if_needed();
 		draw_oxygen_if_needed();
-		
+				
 		frame += 6;
 		if (frame > 12) frame = 0;
 		
