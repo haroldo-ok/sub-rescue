@@ -34,6 +34,7 @@
 #define OXYGEN_RESOLUTION (4)
 #define OXYGEN_SHIFT (4)
 #define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
+#define OXYGEN_MIN (-OXYGEN_MAX / 6)
 
 #define RESCUE_CHARS (6)
 
@@ -635,12 +636,12 @@ void draw_life_if_needed() {
 }
 
 void set_oxygen(int value) {
-	if (value < 0) value = 0;
+	if (value < OXYGEN_MIN) value = OXYGEN_MIN;
 	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
 	
 	oxygen.value = value;
 	
-	unsigned char shifted_value = value >> OXYGEN_SHIFT;
+	unsigned char shifted_value = value < 0 ? 0 : value >> OXYGEN_SHIFT;
 	
 	oxygen.dirty = shifted_value != oxygen.last_shifted_value;
 	oxygen.last_shifted_value = shifted_value;
@@ -650,10 +651,18 @@ void add_oxygen(unsigned int value) {
 	set_oxygen(oxygen.value + value);
 }
 
+void add_oxygen_non_negative(unsigned int value) {
+	value = oxygen.value + value;
+	if (value < 0) value = 0;
+	set_oxygen(value);
+}
+
 void draw_oxygen() {
 	SMS_setNextTileatXY(((32 - OXYGEN_CHARS) >> 1) + 1, 2);
 	
 	int remaining = oxygen.last_shifted_value;
+	if (remaining < 0) remaining = 0;
+	
 	for (char i = OXYGEN_CHARS; i; i--) {
 		if (remaining > OXYGEN_RESOLUTION) {
 			SMS_setTile(127 + TILE_USE_SPRITE_PALETTE);
@@ -679,7 +688,7 @@ void handle_oxygen() {
 			add_oxygen(6);
 		} else {
 			add_oxygen(-1);
-			if (!oxygen.value) player->active = 0;
+			if (oxygen.value <= OXYGEN_MIN) player->active = 0;
 		}
 	}
 }
@@ -750,7 +759,7 @@ void perform_level_end_sequence() {
 	while (oxygen.value || rescue.value) {
 		if (oxygen.value) {
 			add_score(level.oxygen_score);
-			add_oxygen(-4);
+			add_oxygen_non_negative(-4);
 		} else if (rescue.value) {
 			add_score(level.diver_score << 1);
 			add_rescue(-1);
