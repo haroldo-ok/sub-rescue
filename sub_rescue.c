@@ -34,6 +34,7 @@
 #define OXYGEN_RESOLUTION (4)
 #define OXYGEN_SHIFT (4)
 #define OXYGEN_MAX ((OXYGEN_CHARS * OXYGEN_RESOLUTION) << OXYGEN_SHIFT)
+#define OXYGEN_MIN (-OXYGEN_MAX / 6)
 
 #define RESCUE_CHARS (6)
 
@@ -95,6 +96,19 @@ struct oxygen {
 struct level {
 	unsigned int number;
 	char starting;
+
+	unsigned int submarine_score;
+	unsigned int fish_score;
+	unsigned int diver_score;
+	unsigned int oxygen_score;
+	
+	unsigned char submarine_speed;
+	unsigned char fish_speed;
+	unsigned char diver_speed;
+	
+	unsigned int diver_chance;
+	int boost_chance;
+	char enemy_can_fire;
 } level;
 
 void add_score(unsigned int value);
@@ -204,7 +218,7 @@ void move_actor(actor *act) {
 		}				
 	}
 	
-	if (_act->autofire) {
+	if (_act->autofire && level.enemy_can_fire) {
 		actor *_shot = _act + 1;		
 		fire_shot(_shot, _act, abs(_act->spd_x) + 1);
 		_shot->group = GROUP_ENEMY_SHOT;
@@ -301,6 +315,10 @@ void handle_player_input() {
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
 		fire_shot(ply_shot, player, PLAYER_SHOT_SPEED);
+		
+		// Player's shot has a slightly larger collision box
+		ply_shot->col_y = 7;
+		ply_shot->col_h = 6;
 	}
 }
 
@@ -319,7 +337,7 @@ void adjust_facing(actor *act, char facing_left) {
 
 void handle_spawners() {
 	static actor *act, *act2;
-	static char i, facing_left, thing_to_spawn;
+	static char i, facing_left, thing_to_spawn, boost;
 	static int y;
 	
 	act = first_spawner;
@@ -328,25 +346,26 @@ void handle_spawners() {
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
 				facing_left = (rand() >> 4) & 1;
-				thing_to_spawn = ((rand() >> 4) & 7) ? ((rand() >> 4) & 1) : 2;
+				thing_to_spawn = (rand() >> 4) % level.diver_chance ? ((rand() >> 4) & 1) : 2;
+				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
 				
 				switch (thing_to_spawn) {
 				case 0:
 					// Spawn a submarine
 					init_actor(act, 0, y, 3, 1, 66, 3);
-					act->spd_x = 2;
+					act->spd_x = level.submarine_speed + boost;
 					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
-					act->score = 10;
+					act->score = level.submarine_score;
 					break;
 					
 				case 1:
 					// Spawn a pair of fishes
 					init_actor(act, 0, y, 2, 1, 128, 4);
 					init_actor(act2, -64, y, 2, 1, 128, 4);
-					act->spd_x = 2;
+					act->spd_x = level.fish_speed + boost;
 					act->group = GROUP_FISH;
-					act->score = 5;
+					act->score = level.fish_score;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
@@ -356,9 +375,9 @@ void handle_spawners() {
 				case 2:
 					// Spawn a diver
 					init_actor(act, 0, y, 2, 1, 192, 4);
-					act->spd_x = 2;
+					act->spd_x = level.diver_speed + boost;
 					act->group = GROUP_DIVER;
-					act->score = 20;
+					act->score = level.diver_score;
 					break;
 				}
 				
@@ -617,25 +636,33 @@ void draw_life_if_needed() {
 }
 
 void set_oxygen(int value) {
-	if (value < 0) value = 0;
+	if (value < OXYGEN_MIN) value = OXYGEN_MIN;
 	if (value > OXYGEN_MAX) value = OXYGEN_MAX;
 	
 	oxygen.value = value;
 	
-	unsigned char shifted_value = value >> OXYGEN_SHIFT;
+	unsigned char shifted_value = value < 0 ? 0 : value >> OXYGEN_SHIFT;
 	
 	oxygen.dirty = shifted_value != oxygen.last_shifted_value;
 	oxygen.last_shifted_value = shifted_value;
 }
 
-void add_oxygen(unsigned int value) {
+void add_oxygen(int value) {
 	set_oxygen(oxygen.value + value);
+}
+
+void add_oxygen_non_negative(int value) {
+	value = oxygen.value + value;
+	if (value < 0) value = 0;
+	set_oxygen(value);
 }
 
 void draw_oxygen() {
 	SMS_setNextTileatXY(((32 - OXYGEN_CHARS) >> 1) + 1, 2);
 	
 	int remaining = oxygen.last_shifted_value;
+	if (remaining < 0) remaining = 0;
+	
 	for (char i = OXYGEN_CHARS; i; i--) {
 		if (remaining > OXYGEN_RESOLUTION) {
 			SMS_setTile(127 + TILE_USE_SPRITE_PALETTE);
@@ -661,7 +688,7 @@ void handle_oxygen() {
 			add_oxygen(6);
 		} else {
 			add_oxygen(-1);
-			if (!oxygen.value) player->active = 0;
+			if (oxygen.value <= OXYGEN_MIN) player->active = 0;
 		}
 	}
 }
@@ -673,6 +700,25 @@ void initialize_level() {
 	ply_shot->active = 0;
 	set_oxygen(0);
 	set_rescue(0);
+	
+	level.fish_score = 1 + level.number / 3;
+	level.submarine_score = level.fish_score << 1;
+	level.diver_score = level.fish_score + level.submarine_score;
+	level.oxygen_score = 1 + level.number / 4;
+	
+	level.fish_speed = 1 + level.number / 3;
+	level.submarine_speed = 1 + level.number / 4;
+	level.diver_speed = 1 + level.number / 5;
+	
+	if (level.fish_speed > PLAYER_SPEED) level.fish_speed = PLAYER_SPEED;
+	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
+	if (level.diver_speed > PLAYER_SPEED) level.diver_speed = PLAYER_SPEED;
+	
+	level.diver_chance = 4 + level.number * 3 / 4;	
+	level.enemy_can_fire = level.number > 1;
+	
+	level.boost_chance = 10 - level.number * 2 / 3;
+	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
 void flash_player_red(unsigned char delay) {
@@ -712,10 +758,10 @@ void perform_level_end_sequence() {
 	load_standard_palettes();
 	while (oxygen.value || rescue.value) {
 		if (oxygen.value) {
-			add_score(1);
-			add_oxygen(-4);
+			add_score(level.oxygen_score);
+			add_oxygen_non_negative(-4);
 		} else if (rescue.value) {
-			add_score(10);
+			add_score(level.diver_score << 1);
 			add_rescue(-1);
 
 			wait_frames(20);
@@ -903,6 +949,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2021,3,20, "Haroldo-OK\\2021", "Sub Rescue",
+SMS_EMBED_SDSC_HEADER(0,2, 2021,3,21, "Haroldo-OK\\2021", "Sub Rescue",
   "A subaquatic shoot-em-up.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
