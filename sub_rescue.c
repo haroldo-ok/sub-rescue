@@ -768,6 +768,7 @@ char gameplay_loop() {
 			perform_level_end_sequence();
 			level.number++;
 			initialize_level();
+			player->active = 1;
 		}
 
 		if (!player->active) {
