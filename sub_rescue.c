@@ -568,9 +568,18 @@ void add_rescue(int value) {
 }
 
 void draw_rescue() {
+	static char blink_control;
+	
 	SMS_setNextTileatXY(32 - RESCUE_CHARS - 2, 2);
 	
 	int remaining = rescue.value;
+	
+	// Blink if all divers rescued.
+	if (rescue.value == RESCUE_CHARS) {
+		if (blink_control & 0x10) remaining = 0;
+		blink_control++;
+	}
+	
 	for (char i = RESCUE_CHARS; i; i--) {
 		SMS_setTile((remaining > 0 ? 63 : 62) + TILE_USE_SPRITE_PALETTE);
 		remaining --;
