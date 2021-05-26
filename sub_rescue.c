@@ -16,7 +16,7 @@
 #define ANIMATION_SPEED (3)
 
 #define PLAYER_SPEED (3)
-#define PLAYER_SHOT_SPEED (4)
+#define PLAYER_SHOT_SPEED (6)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
 #define PLAYER_BOTTOM (146)
@@ -723,9 +723,9 @@ void initialize_level() {
 	level.diver_score = level.fish_score + level.submarine_score;
 	level.oxygen_score = 1 + level.number / 4;
 	
-	level.fish_speed = 1 + level.number / 3;
-	level.submarine_speed = 1 + level.number / 4;
-	level.diver_speed = 1 + level.number / 5;
+	level.fish_speed = 1 + level.number / 4;
+	level.submarine_speed = 1 + level.number / 5;
+	level.diver_speed = 1 + level.number / 6;
 	
 	if (level.fish_speed > PLAYER_SPEED) level.fish_speed = PLAYER_SPEED;
 	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
@@ -735,7 +735,7 @@ void initialize_level() {
 	level.enemy_can_fire = level.number > 1;
 	level.show_diver_indicator = level.number < 2;
 	
-	level.boost_chance = 10 - level.number * 2 / 3;
+	level.boost_chance = 14 - level.number * 2 / 3;
 	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
