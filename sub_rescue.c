@@ -315,6 +315,10 @@ void handle_player_input() {
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+		if (!ply_shot->active && !level.starting) {
+			PSGPlayNoRepeat(player_shot_psg);
+		}
+	
 		fire_shot(ply_shot, player, PLAYER_SHOT_SPEED);
 		
 		// Player's shot has a slightly larger collision box
@@ -834,9 +838,13 @@ char gameplay_loop() {
 	load_standard_palettes();
 
 	clear_sprites();
+	
+	SMS_setLineInterruptHandler(&interrupt_handler);
+	SMS_setLineCounter(180);
+	SMS_enableLineInterrupt();
 
 	SMS_displayOn();
-	
+		
 	initialize_level();
 	
 	while(1) {	
