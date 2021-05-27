@@ -775,6 +775,10 @@ void perform_death_sequence() {
 void perform_level_end_sequence() {
 	load_standard_palettes();
 	while (oxygen.value || rescue.value) {
+		if (player->x < 116) player->x++;
+		if (player->x > 116) player->x--;
+		if (player->y > PLAYER_TOP) player->y--;
+		
 		if (oxygen.value) {
 			add_score(level.oxygen_score);
 			add_oxygen_non_negative(-4);
@@ -785,7 +789,11 @@ void perform_level_end_sequence() {
 			wait_frames(20);
 		}
 		
+		SMS_initSprites();	
+		draw_actors();		
+		SMS_finalizeSprites();
 		SMS_waitForVBlank();
+		SMS_copySpritestoSAT();
 		
 		draw_score_if_needed();
 		draw_rescue_if_needed();
