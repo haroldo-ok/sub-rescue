@@ -3,7 +3,7 @@ OBJS := data.rel sub_rescue.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/font.1bpp data/sprites_tiles.psgcompr data/background_tiles.psgcompr
+data.c: data/* data/font.1bpp data/sprites_tiles.psgcompr data/background_tiles.psgcompr data/enemy_death.psg data/rescue_diver.psg
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
@@ -11,6 +11,12 @@ data/sprites_tiles.psgcompr: data/img/sprites.png
 
 data/background_tiles.psgcompr: data/img/background.png
 	BMP2Tile.exe data/img/background.png -palsms -fullpalette -savetiles data/background_tiles.psgcompr -savetilemap data/background_tilemap.bin -savepalette data/background_palette.bin
+	
+data/enemy_death.psg: data/deflemask/enemy_death.vgm
+	vgm2psg data/deflemask/enemy_death.vgm data/enemy_death.psg 2
+
+data/rescue_diver.psg: data/deflemask/rescue_diver.vgm
+	vgm2psg data/deflemask/rescue_diver.vgm data/rescue_diver.psg 2
 	
 %.vgm: %.wav
 	psgtalk -r 512 -u 1 -m vgm $<

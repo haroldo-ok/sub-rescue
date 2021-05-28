@@ -269,6 +269,7 @@ void clear_sprites() {
 
 void interrupt_handler() {
 	PSGFrame();
+	PSGSFXFrame();
 }
 
 void load_standard_palettes() {
@@ -488,6 +489,7 @@ void check_collision_against_player_shot() {
 		if (collider->group != GROUP_DIVER) {
 			collider->active = 0;
 			add_score(collider->score);
+			PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 		}
 		
 		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
@@ -507,6 +509,7 @@ void check_collision_against_player() {
 			add_rescue(1);
 			// Hide the "Get ->" indicator.
 			(collider + 1)->active = 0;
+			PSGSFXPlay(rescue_diver_psg, SFX_CHANNELS2AND3);
 		} else {
 			player->active = 0;
 		}
