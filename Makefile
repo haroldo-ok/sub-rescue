@@ -3,7 +3,7 @@ OBJS := data.rel sub_rescue.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/font.1bpp data/sprites_tiles.psgcompr data/background_tiles.psgcompr data/enemy_death.psg data/rescue_diver.psg
+data.c: data/* data/font.1bpp data/sprites_tiles.psgcompr data/background_tiles.psgcompr data/enemy_death.psg data/rescue_diver.psg data/fill_air.psg
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
@@ -17,6 +17,9 @@ data/enemy_death.psg: data/deflemask/enemy_death.vgm
 
 data/rescue_diver.psg: data/deflemask/rescue_diver.vgm
 	vgm2psg data/deflemask/rescue_diver.vgm data/rescue_diver.psg 2
+
+data/fill_air.psg: data/deflemask/fill_air.vgm
+	vgm2psg data/deflemask/fill_air.vgm data/fill_air.psg 3
 	
 %.vgm: %.wav
 	psgtalk -r 512 -u 1 -m vgm $<

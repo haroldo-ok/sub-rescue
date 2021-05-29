@@ -90,7 +90,8 @@ struct life {
 struct oxygen {
 	int value;
 	unsigned char last_shifted_value;
-	char dirty;
+	char dirty;	
+	char playing_sfx;
 } oxygen;
 
 struct level {
@@ -699,16 +700,32 @@ char is_oxygen_critical() {
 	return !level.starting && oxygen.value < OXYGEN_MAX >> 2;
 }
 
+char is_player_filling_oxygen() {
+	return player->y < PLAYER_TOP + 4;
+}
+
 void handle_oxygen() {
 	if (level.starting) {			
 		add_oxygen(5);
 		level.starting = oxygen.value < OXYGEN_MAX;
 	} else {
-		if (player->y < PLAYER_TOP + 4) {
+		if (is_player_filling_oxygen()) {
 			add_oxygen(6);
 		} else {
 			add_oxygen(-1);
 			if (oxygen.value <= OXYGEN_MIN) player->active = 0;
+		}
+	}
+
+	if (level.starting || is_player_filling_oxygen()) {
+		if (!oxygen.playing_sfx) {
+			oxygen.playing_sfx = 1;
+			PSGSFXPlay(fill_air_psg, SFX_CHANNELS2AND3);			
+		}
+	} else {
+		if (oxygen.playing_sfx) {
+			oxygen.playing_sfx = 0;
+			PSGSFXStop();
 		}
 	}
 }
@@ -832,6 +849,7 @@ char gameplay_loop() {
 	set_life(4);
 	set_oxygen(0);	
 	oxygen.dirty = 1;
+	oxygen.playing_sfx = 0;
 	
 	level.number = 1;
 	level.starting = 1;
