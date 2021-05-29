@@ -784,7 +784,9 @@ void flash_player_red(unsigned char delay) {
 }
 
 void perform_death_sequence() {
-	for (unsigned char i = 70; i; i--) {
+	PSGSFXPlay(player_death_psg, SFX_CHANNELS2AND3);
+	
+	for (unsigned char i = 80; i; i--) {
 		SMS_waitForVBlank();
 		flash_player_red(8);
 	}
