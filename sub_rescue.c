@@ -117,6 +117,9 @@ void add_score(unsigned int value);
 void add_rescue(int value);
 void add_life(int value);
 
+char is_oxygen_critical();
+char is_player_filling_oxygen();
+
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
 	static int sx, sy;
@@ -269,6 +272,19 @@ void clear_sprites() {
 }
 
 void interrupt_handler() {
+	static unsigned char alarm_control = 0;
+	
+	if (is_oxygen_critical() && !is_player_filling_oxygen()) {
+		if (!alarm_control) {
+			PSGSFXPlay(player_danger_psg, SFX_CHANNELS2AND3);
+			alarm_control = 40;
+		} else {
+			alarm_control--;
+		}
+	} else {
+		alarm_control = 0;
+	}
+	
 	PSGFrame();
 	PSGSFXFrame();
 }
