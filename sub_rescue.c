@@ -97,6 +97,7 @@ struct oxygen {
 struct level {
 	unsigned int number;
 	char starting;
+	char ending;
 
 	unsigned int submarine_score;
 	unsigned int fish_score;
@@ -733,21 +734,24 @@ void handle_oxygen() {
 		}
 	}
 
-	if (level.starting || is_player_filling_oxygen()) {
-		if (!oxygen.playing_sfx) {
-			oxygen.playing_sfx = 1;
-			PSGSFXPlay(fill_air_psg, SFX_CHANNELS2AND3);			
-		}
-	} else {
-		if (oxygen.playing_sfx) {
-			oxygen.playing_sfx = 0;
-			PSGSFXStop();
+	if (!level.ending) {		
+		if (level.starting || is_player_filling_oxygen()) {
+			if (!oxygen.playing_sfx) {
+				oxygen.playing_sfx = 1;
+				PSGSFXPlay(fill_air_psg, SFX_CHANNELS2AND3);			
+			}
+		} else {
+			if (oxygen.playing_sfx) {
+				oxygen.playing_sfx = 0;
+				PSGSFXStop();
+			}
 		}
 	}
 }
 
 void initialize_level() {
 	level.starting = 1;
+	level.ending = 0;
 	
 	clear_actors();
 	ply_shot->active = 0;
@@ -811,7 +815,11 @@ void perform_death_sequence() {
 }
 
 void perform_level_end_sequence() {
-	load_standard_palettes();
+	level.ending = 1;
+	PSGSFXStop();
+	PSGPlayNoRepeat(level_end_psg);
+	
+	load_standard_palettes();	
 	while (oxygen.value || rescue.value) {
 		if (player->x < 116) player->x++;
 		if (player->x > 116) player->x--;
@@ -821,6 +829,7 @@ void perform_level_end_sequence() {
 			add_score(level.oxygen_score);
 			add_oxygen_non_negative(-4);
 		} else if (rescue.value) {
+			PSGPlayNoRepeat(level_beep_psg);
 			add_score(level.diver_score << 1);
 			add_rescue(-1);
 
@@ -837,6 +846,9 @@ void perform_level_end_sequence() {
 		draw_rescue_if_needed();
 		draw_oxygen_if_needed();
 	}
+	
+	level.ending = 0;
+	PSGSFXPlay(fill_air_psg, SFX_CHANNELS2AND3);			
 }
 
 void draw_go_up_icon() {
