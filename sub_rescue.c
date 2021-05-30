@@ -763,7 +763,7 @@ void initialize_level() {
 	level.diver_score = level.fish_score + level.submarine_score;
 	level.oxygen_score = 1 + level.number / 4;
 	
-	level.fish_speed = 1 + level.number / 4;
+	level.fish_speed = 1 + level.number / 3;
 	level.submarine_speed = 1 + level.number / 5;
 	level.diver_speed = 1 + level.number / 6;
 	
