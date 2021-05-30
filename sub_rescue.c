@@ -16,7 +16,7 @@
 #define ANIMATION_SPEED (3)
 
 #define PLAYER_SPEED (3)
-#define PLAYER_SHOT_SPEED (4)
+#define PLAYER_SHOT_SPEED (6)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
 #define PLAYER_BOTTOM (146)
@@ -90,12 +90,14 @@ struct life {
 struct oxygen {
 	int value;
 	unsigned char last_shifted_value;
-	char dirty;
+	char dirty;	
+	char playing_sfx;
 } oxygen;
 
 struct level {
 	unsigned int number;
 	char starting;
+	char ending;
 
 	unsigned int submarine_score;
 	unsigned int fish_score;
@@ -115,6 +117,9 @@ struct level {
 void add_score(unsigned int value);
 void add_rescue(int value);
 void add_life(int value);
+
+char is_oxygen_critical();
+char is_player_filling_oxygen();
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
 	static char i, j;
@@ -268,7 +273,21 @@ void clear_sprites() {
 }
 
 void interrupt_handler() {
+	static unsigned char alarm_control = 0;
+	
+	if (is_oxygen_critical() && !is_player_filling_oxygen()) {
+		if (!alarm_control) {
+			PSGSFXPlay(player_danger_psg, SFX_CHANNELS2AND3);
+			alarm_control = 40;
+		} else {
+			alarm_control--;
+		}
+	} else {
+		alarm_control = 0;
+	}
+	
 	PSGFrame();
+	PSGSFXFrame();
 }
 
 void load_standard_palettes() {
@@ -315,6 +334,10 @@ void handle_player_input() {
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+		if (!ply_shot->active && !level.starting) {
+			PSGPlayNoRepeat(player_shot_psg);
+		}
+	
 		fire_shot(ply_shot, player, PLAYER_SHOT_SPEED);
 		
 		// Player's shot has a slightly larger collision box
@@ -484,6 +507,7 @@ void check_collision_against_player_shot() {
 		if (collider->group != GROUP_DIVER) {
 			collider->active = 0;
 			add_score(collider->score);
+			PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 		}
 		
 		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
@@ -503,6 +527,7 @@ void check_collision_against_player() {
 			add_rescue(1);
 			// Hide the "Get ->" indicator.
 			(collider + 1)->active = 0;
+			PSGSFXPlay(rescue_diver_psg, SFX_CHANNELS2AND3);
 		} else {
 			player->active = 0;
 		}
@@ -692,22 +717,41 @@ char is_oxygen_critical() {
 	return !level.starting && oxygen.value < OXYGEN_MAX >> 2;
 }
 
+char is_player_filling_oxygen() {
+	return player->y < PLAYER_TOP + 4;
+}
+
 void handle_oxygen() {
 	if (level.starting) {			
 		add_oxygen(5);
 		level.starting = oxygen.value < OXYGEN_MAX;
 	} else {
-		if (player->y < PLAYER_TOP + 4) {
+		if (is_player_filling_oxygen()) {
 			add_oxygen(6);
 		} else {
 			add_oxygen(-1);
 			if (oxygen.value <= OXYGEN_MIN) player->active = 0;
 		}
 	}
+
+	if (!level.ending) {		
+		if (level.starting || is_player_filling_oxygen()) {
+			if (!oxygen.playing_sfx) {
+				oxygen.playing_sfx = 1;
+				PSGSFXPlay(fill_air_psg, SFX_CHANNELS2AND3);			
+			}
+		} else {
+			if (oxygen.playing_sfx) {
+				oxygen.playing_sfx = 0;
+				PSGSFXStop();
+			}
+		}
+	}
 }
 
 void initialize_level() {
 	level.starting = 1;
+	level.ending = 0;
 	
 	clear_actors();
 	ply_shot->active = 0;
@@ -720,8 +764,8 @@ void initialize_level() {
 	level.oxygen_score = 1 + level.number / 4;
 	
 	level.fish_speed = 1 + level.number / 3;
-	level.submarine_speed = 1 + level.number / 4;
-	level.diver_speed = 1 + level.number / 5;
+	level.submarine_speed = 1 + level.number / 5;
+	level.diver_speed = 1 + level.number / 6;
 	
 	if (level.fish_speed > PLAYER_SPEED) level.fish_speed = PLAYER_SPEED;
 	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
@@ -731,7 +775,7 @@ void initialize_level() {
 	level.enemy_can_fire = level.number > 1;
 	level.show_diver_indicator = level.number < 2;
 	
-	level.boost_chance = 10 - level.number * 2 / 3;
+	level.boost_chance = 14 - level.number * 2 / 3;
 	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
@@ -760,7 +804,9 @@ void flash_player_red(unsigned char delay) {
 }
 
 void perform_death_sequence() {
-	for (unsigned char i = 70; i; i--) {
+	PSGSFXPlay(player_death_psg, SFX_CHANNELS2AND3);
+	
+	for (unsigned char i = 80; i; i--) {
 		SMS_waitForVBlank();
 		flash_player_red(8);
 	}
@@ -769,24 +815,40 @@ void perform_death_sequence() {
 }
 
 void perform_level_end_sequence() {
-	load_standard_palettes();
+	level.ending = 1;
+	PSGSFXStop();
+	PSGPlayNoRepeat(level_end_psg);
+	
+	load_standard_palettes();	
 	while (oxygen.value || rescue.value) {
+		if (player->x < 116) player->x++;
+		if (player->x > 116) player->x--;
+		if (player->y > PLAYER_TOP) player->y--;
+		
 		if (oxygen.value) {
 			add_score(level.oxygen_score);
 			add_oxygen_non_negative(-4);
 		} else if (rescue.value) {
+			PSGPlayNoRepeat(level_beep_psg);
 			add_score(level.diver_score << 1);
 			add_rescue(-1);
 
 			wait_frames(20);
 		}
 		
+		SMS_initSprites();	
+		draw_actors();		
+		SMS_finalizeSprites();
 		SMS_waitForVBlank();
+		SMS_copySpritestoSAT();
 		
 		draw_score_if_needed();
 		draw_rescue_if_needed();
 		draw_oxygen_if_needed();
 	}
+	
+	level.ending = 0;
+	PSGSFXPlay(fill_air_psg, SFX_CHANNELS2AND3);			
 }
 
 void draw_go_up_icon() {
@@ -817,6 +879,7 @@ char gameplay_loop() {
 	set_life(4);
 	set_oxygen(0);	
 	oxygen.dirty = 1;
+	oxygen.playing_sfx = 0;
 	
 	level.number = 1;
 	level.starting = 1;
@@ -834,9 +897,13 @@ char gameplay_loop() {
 	load_standard_palettes();
 
 	clear_sprites();
+	
+	SMS_setLineInterruptHandler(&interrupt_handler);
+	SMS_setLineCounter(180);
+	SMS_enableLineInterrupt();
 
 	SMS_displayOn();
-	
+		
 	initialize_level();
 	
 	while(1) {	
@@ -991,6 +1058,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2021,3,21, "Haroldo-OK\\2021", "Sub Rescue",
+SMS_EMBED_SDSC_HEADER(0,3, 2021,5,30, "Haroldo-OK\\2021", "Sub Rescue",
   "A subaquatic shoot-em-up.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
